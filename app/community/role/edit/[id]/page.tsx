@@ -17,6 +17,8 @@ const roleLabels: Record<UserRole, string> = {
   pt: '물리치료사',
   rt: '방사선사',
   admin_staff: '행정·원무',
+  manager: '원장/관리자',
+  etc: '기타',
 }
 
 export default function EditRolePostPage() {
