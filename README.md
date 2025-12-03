@@ -81,6 +81,14 @@ medifirst/
 
 자세한 스키마는 `supabase/schema.sql`을 참고하세요.
 
+## 개발 완료 문서
+
+자세한 개발 내용은 [개발 완료 문서](./docs/DEVELOPMENT_COMPLETE.md)를 참고하세요.
+
+## 변경 이력
+
+프로젝트 변경 이력은 [CHANGELOG.md](./CHANGELOG.md)를 참고하세요.
+
 ## 라이선스
 
 이 프로젝트는 비공개 프로젝트입니다.
