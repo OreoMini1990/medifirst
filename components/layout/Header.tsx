@@ -33,9 +33,16 @@ export function Header() {
   const pathname = usePathname()
   const [user, setUser] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
+    // 환경 변수가 없으면 클라이언트를 생성하지 않음
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setLoading(false)
+      return
+    }
+
+    const supabase = createClient()
+
     async function getUser() {
       try {
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
@@ -288,10 +295,17 @@ export function Header() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
   const handleSignOut = async () => {
+    // 환경 변수가 없으면 바로 리다이렉트
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      window.location.href = '/login'
+      return
+    }
+
     try {
+      const supabase = createClient()
       const { error } = await supabase.auth.signOut()
       if (error) {
         console.error('로그아웃 오류:', error)
