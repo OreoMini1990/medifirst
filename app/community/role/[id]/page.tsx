@@ -147,6 +147,49 @@ export default function PostDetailPage() {
     }
   }
 
+  async function fetchLikeStatus() {
+    if (!currentUserId || !params.id) return
+    
+    try {
+      const response = await fetch(`/api/posts/${params.id}/like`)
+      const data = await response.json()
+      setLiked(data.liked || false)
+      setLikeCount(data.likeCount || 0)
+    } catch (error) {
+      console.error('Error fetching like status:', error)
+    }
+  }
+
+  async function handleLike() {
+    if (!currentUserId) {
+      router.push('/login')
+      return
+    }
+
+    if (liking) return
+
+    setLiking(true)
+    try {
+      const response = await fetch(`/api/posts/${params.id}/like`, {
+        method: 'POST',
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setLiked(data.liked)
+        setLikeCount(data.likeCount || 0)
+        // 게시글 상태도 업데이트
+        if (post) {
+          setPost({ ...post, like_count: data.likeCount || 0 })
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      setLiking(false)
+    }
+  }
+
   async function checkAccess() {
     if (!post || !currentUserId) return
 
