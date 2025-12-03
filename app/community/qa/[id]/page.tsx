@@ -68,7 +68,7 @@ export default function QAPostDetailPage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles!author_id(display_name, role)')
+        .select('*, profiles!author_id(display_name, role, avatar_url)')
         .eq('id', params.id)
         .single()
 
