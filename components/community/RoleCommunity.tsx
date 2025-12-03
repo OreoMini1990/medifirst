@@ -114,40 +114,56 @@ export function RoleCommunity() {
       
       if (authError) {
         console.error('RoleCommunity: Auth error:', authError)
+        setLoading(false)
         router.push('/login')
         return
       }
       
       if (!user) {
         console.log('RoleCommunity: No user found')
+        setLoading(false)
         router.push('/login')
         return
       }
 
       console.log('RoleCommunity: Fetching profile for user:', user.id)
-      const { data: profile, error: profileError } = await supabase
+      
+      // 타임아웃 설정
+      const profilePromise = supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
+      
+      const timeoutPromise = new Promise<{ data: null, error: { message: string } }>((resolve) => 
+        setTimeout(() => resolve({ data: null, error: { message: 'Profile fetch timeout' } }), 5000)
+      )
+      
+      const profileResult = await Promise.race([profilePromise, timeoutPromise])
+      const { data: profile, error: profileError } = profileResult
 
       if (profileError) {
         console.error('RoleCommunity: Profile error:', profileError)
         console.error('RoleCommunity: Profile error details:', JSON.stringify(profileError, null, 2))
+        setLoading(false)
         router.push('/onboarding')
         return
       }
 
       if (!profile?.role) {
         console.log('RoleCommunity: No role found in profile')
+        setLoading(false)
         router.push('/onboarding')
         return
       }
 
       console.log('RoleCommunity: User role found:', profile.role)
       setUserRole(profile.role as UserRole)
+      setLoading(false)
     } catch (error) {
       console.error('RoleCommunity: Unexpected error in fetchUserRole:', error)
+      console.error('RoleCommunity: Error details:', JSON.stringify(error, null, 2))
+      setLoading(false)
       router.push('/login')
     }
   }
