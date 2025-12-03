@@ -31,8 +31,10 @@ export function FreeBoard() {
     setLoading(true)
     
     try {
+      const client = createClient()
+      
       // 전체 개수 조회
-      let countQuery = supabase
+      let countQuery = client
         .from('posts')
         .select('*', { count: 'exact', head: true })
         .eq('board', 'community')
@@ -50,7 +52,7 @@ export function FreeBoard() {
 
       // 게시글 조회
       const offset = (currentPage - 1) * postsPerPage
-      let query = supabase
+      let query = client
         .from('posts')
         .select('*, profiles!author_id(display_name, role)')
         .eq('board', 'community')
@@ -68,13 +70,13 @@ export function FreeBoard() {
         .range(offset, offset + postsPerPage - 1)
 
       if (error) {
-        console.error('Error fetching posts:', error)
+        console.error('FreeBoard: Error fetching posts:', error)
         setPosts([])
       } else {
         // 각 게시글의 댓글 수 조회
         const postsWithComments = await Promise.all(
           (data || []).map(async (post) => {
-            const { count } = await supabase
+            const { count } = await client
               .from('comments')
               .select('*', { count: 'exact', head: true })
               .eq('post_id', post.id)
@@ -86,12 +88,12 @@ export function FreeBoard() {
         setPosts(postsWithComments as Post[])
       }
     } catch (err) {
-      console.error('Unexpected error:', err)
+      console.error('FreeBoard: Unexpected error:', err)
       setPosts([])
     } finally {
       setLoading(false)
     }
-  }, [currentPage, postsPerPage, searchQuery, supabase])
+  }, [currentPage, searchQuery])
 
   useEffect(() => {
     setCurrentPage(1) // 검색 시 첫 페이지로 리셋

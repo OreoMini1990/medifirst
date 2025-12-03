@@ -23,12 +23,13 @@ export function QABoard() {
   const [totalPages, setTotalPages] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const postsPerPage = 20
-  const supabase = createClient()
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     
     try {
+      const supabase = createClient()
+      
       // 전체 개수 조회
       let countQuery = supabase
         .from('posts')
@@ -91,7 +92,7 @@ export function QABoard() {
     } finally {
       setLoading(false)
     }
-  }, [currentPage, postsPerPage, searchQuery, supabase])
+  }, [currentPage, searchQuery])
 
   useEffect(() => {
     setCurrentPage(1) // 검색 시 첫 페이지로 리셋
