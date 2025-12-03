@@ -91,7 +91,7 @@ export default function NoticeDetailPage() {
   async function fetchComments() {
     const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles!author_id(display_name, role, avatar_url)')
+        .select('*, profiles!author_id(display_name, role)')
       .eq('post_id', params.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
@@ -147,7 +147,7 @@ export default function NoticeDetailPage() {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles!author_id(display_name, role, avatar_url)')
+        .select('*, profiles!author_id(display_name, role)')
       .eq('board', 'claims')
       .eq('sub_board', 'notice')
       .neq('id', params.id as string)
@@ -355,7 +355,7 @@ export default function NoticeDetailPage() {
                 href={`/claims/notice/${p.id}`}
                 title={p.title}
                 authorName={p.profiles?.display_name || '익명'}
-                avatarUrl={p.profiles?.avatar_url || null}
+                avatarUrl={null}
                 commentCount={p.commentCount || 0}
                 likeCount={0}
                 viewCount={p.view_count || 0}

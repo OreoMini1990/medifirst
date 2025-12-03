@@ -102,7 +102,7 @@ export default function ClaimsQADetailPage() {
   async function fetchComments() {
     const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles!author_id(display_name, role, avatar_url)')
+        .select('*, profiles!author_id(display_name, role)')
       .eq('post_id', params.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
@@ -158,7 +158,7 @@ export default function ClaimsQADetailPage() {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles!author_id(display_name, role, avatar_url)')
+        .select('*, profiles!author_id(display_name, role)')
       .eq('board', 'claims')
       .eq('sub_board', 'qa')
       .neq('id', params.id as string)
