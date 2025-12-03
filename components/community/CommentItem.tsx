@@ -263,16 +263,16 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
                       : 'text-slate-500 dark:text-slate-400 hover:text-emerald-500'
                   } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
                     liked 
                       ? 'bg-emerald-50 dark:bg-emerald-900/20' 
                       : 'bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
                   }`}>
-                    <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
+                    <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
                   </div>
-                  <span className="text-xs font-medium">추천</span>
+                  <span className="text-[10px] font-medium">추천</span>
                   {likeCount > 0 && (
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{likeCount}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{likeCount}</span>
                   )}
                 </button>
                 
