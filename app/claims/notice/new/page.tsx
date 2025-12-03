@@ -20,9 +20,14 @@ export default function NewNoticePage() {
   const supabase = createClient()
 
   useEffect(() => {
+    let isMounted = true
+    
     async function checkStaffPermission() {
       try {
+        console.log('Checking staff permission...')
         const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (!isMounted) return
         
         if (authError) {
           console.error('Auth error:', authError)
@@ -32,6 +37,7 @@ export default function NewNoticePage() {
         }
         
         if (!user) {
+          console.log('No user, redirecting to login')
           setError('로그인이 필요합니다.')
           setLoading(false)
           router.push('/login')
@@ -46,6 +52,8 @@ export default function NewNoticePage() {
           .eq('id', user.id)
           .single()
 
+        if (!isMounted) return
+
         if (profileError) {
           console.error('Profile fetch error:', profileError)
           setError('프로필 정보를 불러올 수 없습니다.')
@@ -59,6 +67,8 @@ export default function NewNoticePage() {
         const staff = profile?.role === 'manager' || profile?.role === 'admin_staff'
         console.log('Is staff:', staff)
         
+        if (!isMounted) return
+        
         setIsStaff(staff)
         
         if (!staff) {
@@ -68,11 +78,18 @@ export default function NewNoticePage() {
         setLoading(false)
       } catch (error) {
         console.error('Unexpected error checking staff permission:', error)
-        setError('권한 확인 중 오류가 발생했습니다.')
-        setLoading(false)
+        if (isMounted) {
+          setError('권한 확인 중 오류가 발생했습니다.')
+          setLoading(false)
+        }
       }
     }
+    
     checkStaffPermission()
+    
+    return () => {
+      isMounted = false
+    }
   }, [supabase, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
