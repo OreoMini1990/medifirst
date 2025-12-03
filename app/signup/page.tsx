@@ -210,28 +210,100 @@ export default function SignupPage() {
     })
 
     if (authError) {
-      setError(authError.message)
+      console.error('인증 오류:', authError)
+      // 에러 메시지를 한글로 변환
+      let errorMessage = authError.message
+      if (authError.message.includes('User already registered') || authError.message.includes('already registered')) {
+        errorMessage = '이미 등록된 이메일입니다.'
+      } else if (authError.message.includes('Invalid email') || authError.message.includes('invalid')) {
+        errorMessage = '올바른 이메일 형식을 입력해주세요.'
+      } else if (authError.message.includes('Password') || authError.message.includes('password')) {
+        errorMessage = '비밀번호가 너무 짧거나 약합니다.'
+      } else if (authError.message.includes('Email rate limit')) {
+        errorMessage = '이메일 전송 횟수가 초과되었습니다. 잠시 후 다시 시도해주세요.'
+      }
+      setError(errorMessage)
       setLoading(false)
       return
     }
 
     if (authData.user) {
-      // 프로필 생성 (직업과 근무지 필수)
-      const { error: profileError } = await supabase
+      // 세션이 완전히 설정될 때까지 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      // 현재 세션 확인
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError || !session) {
+        console.error('세션 오류:', sessionError)
+        // 세션이 없어도 프로필 업데이트는 시도 (트리거가 프로필을 생성했을 수 있음)
+      }
+      
+      // 프로필이 이미 존재하는지 확인 (트리거에 의해 생성되었을 수 있음)
+      const { data: existingProfile } = await supabase
         .from('profiles')
-        .insert({
-          id: authData.user.id,
-          email,
-          display_name: displayName.trim() || null,
-          role: role as UserRole,
-          workplace_name: workplaceName.trim(),
-          hospital_name: workplaceName.trim(), // 하위 호환성
-        })
+        .select('id')
+        .eq('id', authData.user.id)
+        .single()
+      
+      if (existingProfile) {
+        // 프로필이 이미 존재하면 업데이트
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            display_name: displayName.trim() || null,
+            role: role as UserRole,
+            workplace_name: workplaceName.trim(),
+            hospital_name: workplaceName.trim(), // 하위 호환성
+          })
+          .eq('id', authData.user.id)
 
-      if (profileError) {
-        setError(profileError.message)
-        setLoading(false)
-        return
+        if (updateError) {
+          console.error('프로필 업데이트 오류:', updateError)
+          setError('프로필 업데이트 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          setLoading(false)
+          return
+        }
+      } else {
+        // 프로필이 없으면 생성 (직업과 근무지 필수)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            email,
+            display_name: displayName.trim() || null,
+            role: role as UserRole,
+            workplace_name: workplaceName.trim(),
+            hospital_name: workplaceName.trim(), // 하위 호환성
+          })
+
+        if (profileError) {
+          console.error('프로필 생성 오류:', profileError)
+          console.error('프로필 생성 오류 상세:', JSON.stringify(profileError, null, 2))
+          // RLS 정책 오류인 경우 더 명확한 메시지 표시
+          if (profileError.message.includes('row-level security') || profileError.message.includes('RLS')) {
+            setError('회원가입 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+          } else if (profileError.message.includes('duplicate') || profileError.message.includes('unique')) {
+            // 중복 오류인 경우 업데이트 시도
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                display_name: displayName.trim() || null,
+                role: role as UserRole,
+                workplace_name: workplaceName.trim(),
+                hospital_name: workplaceName.trim(),
+              })
+              .eq('id', authData.user.id)
+            
+            if (updateError) {
+              setError('이미 등록된 사용자입니다.')
+            }
+          } else {
+            setError(profileError.message || '프로필 생성 중 오류가 발생했습니다.')
+          }
+          setLoading(false)
+          return
+        }
       }
 
       router.push('/')
@@ -272,7 +344,7 @@ export default function SignupPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="your@email.com"
+                placeholder="예) example@email.com"
                 value={email}
                 onChange={handleEmailChange}
                 required
@@ -358,11 +430,11 @@ export default function SignupPage() {
             </Button>
           </form>
 
-          <div className="relative my-6">
+            <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <Separator />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
+            <div className="relative flex justify-center text-xs">
               <span className="bg-background px-2 text-muted-foreground">
                 또는
               </span>
