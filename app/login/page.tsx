@@ -24,15 +24,27 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
-      setError(error.message)
+      console.error('로그인 오류:', error)
+      // 에러 메시지를 한글로 변환
+      let errorMessage = error.message
+      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid')) {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.'
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = '이메일 확인이 필요합니다. 이메일을 확인해주세요.'
+      } else if (error.message.includes('User not found')) {
+        errorMessage = '등록되지 않은 이메일입니다.'
+      } else if (error.message.includes('Too many requests')) {
+        errorMessage = '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해주세요.'
+      }
+      setError(errorMessage)
       setLoading(false)
-    } else {
+    } else if (data.user) {
       router.push('/')
       router.refresh()
     }
