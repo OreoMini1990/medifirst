@@ -37,37 +37,67 @@ export function Header() {
 
   useEffect(() => {
     async function getUser() {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      
-      if (authUser) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
+      try {
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
         
-        if (profile) {
-          setUser(profile)
+        if (authError) {
+          console.error('Header: Auth error:', authError)
+          setUser(null)
+          setLoading(false)
+          return
         }
-      } else {
+        
+        if (authUser) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authUser.id)
+            .single()
+          
+          if (profileError) {
+            console.error('Header: Profile error:', profileError)
+            setUser(null)
+          } else if (profile) {
+            setUser(profile)
+          } else {
+            setUser(null)
+          }
+        } else {
+          setUser(null)
+        }
+      } catch (error) {
+        console.error('Header: Unexpected error:', error)
         setUser(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     
     getUser()
 
     // 세션 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Header: Auth state changed:', event, session?.user?.id)
+      
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        
-        if (profile) {
-          setUser(profile)
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
+          
+          if (profileError) {
+            console.error('Header: Profile error on auth change:', profileError)
+            setUser(null)
+          } else if (profile) {
+            setUser(profile)
+          } else {
+            setUser(null)
+          }
+        } catch (error) {
+          console.error('Header: Unexpected error on auth change:', error)
+          setUser(null)
         }
       } else {
         setUser(null)
