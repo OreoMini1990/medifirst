@@ -57,15 +57,32 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      // Vercel 환경에서는 VERCEL_URL을 사용하거나 window.location.origin 사용
+      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL 
+        || (typeof window !== 'undefined' ? window.location.origin : '')
+        || 'https://your-vercel-url.vercel.app'
+      
+      const callbackUrl = `${redirectUrl}/auth/callback`
+      
+      console.log('Google OAuth redirect URL:', callbackUrl)
 
-    if (error) {
-      setError(error.message)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: callbackUrl,
+        },
+      })
+
+      if (error) {
+        console.error('Google OAuth error:', error)
+        setError(error.message || '구글 로그인 중 오류가 발생했습니다.')
+        setLoading(false)
+      }
+      // 성공 시 리다이렉트되므로 여기서는 아무것도 하지 않음
+    } catch (err) {
+      console.error('Unexpected error during Google login:', err)
+      setError('구글 로그인 중 예상치 못한 오류가 발생했습니다.')
       setLoading(false)
     }
   }
