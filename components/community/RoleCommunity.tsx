@@ -105,7 +105,7 @@ export function RoleCommunity() {
     } finally {
       setLoading(false)
     }
-  }, [userRole, currentPage, postsPerPage, searchQuery, supabase])
+  }, [userRole, currentPage, searchQuery, supabase])
 
   async function fetchUserRole() {
     try {

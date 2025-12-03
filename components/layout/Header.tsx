@@ -176,6 +176,16 @@ export function Header() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Header: Auth state changed:', event, session?.user?.id)
       
+      // SIGNED_IN 이벤트 시 약간의 지연 후 프로필 다시 가져오기
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('Header: User signed in, fetching profile...')
+        // 세션이 완전히 설정될 때까지 약간 대기
+        await new Promise(resolve => setTimeout(resolve, 300))
+        // getUser 함수 다시 호출
+        getUser()
+        return
+      }
+      
       if (session?.user) {
         try {
           console.log('Header: Fetching profile on auth change for user:', session.user.id)
