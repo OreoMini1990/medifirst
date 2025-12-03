@@ -49,22 +49,55 @@ export function Header() {
         
         if (authUser) {
           console.log('Header: Fetching profile for user:', authUser.id)
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .single()
           
-          if (profileError) {
-            console.error('Header: Profile error:', profileError)
-            console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
-            setUser(null)
-          } else if (profile) {
-            console.log('Header: Profile loaded:', profile.display_name, profile.email)
-            setUser(profile)
-          } else {
-            console.log('Header: No profile found')
-            setUser(null)
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', authUser.id)
+              .single()
+            
+            if (profileError) {
+              console.error('Header: Profile error:', profileError)
+              console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
+              // 프로필이 없어도 기본 정보로 사용자 표시
+              setUser({
+                id: authUser.id,
+                email: authUser.email || '',
+                display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+                role: null,
+                workplace_name: null,
+                created_at: authUser.created_at,
+                updated_at: authUser.updated_at || authUser.created_at,
+              } as Profile)
+            } else if (profile) {
+              console.log('Header: Profile loaded:', profile.display_name, profile.email)
+              setUser(profile)
+            } else {
+              console.log('Header: No profile found, using auth user data')
+              // 프로필이 없어도 기본 정보로 사용자 표시
+              setUser({
+                id: authUser.id,
+                email: authUser.email || '',
+                display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+                role: null,
+                workplace_name: null,
+                created_at: authUser.created_at,
+                updated_at: authUser.updated_at || authUser.created_at,
+              } as Profile)
+            }
+          } catch (err) {
+            console.error('Header: Exception fetching profile:', err)
+            // 예외 발생 시에도 기본 정보로 사용자 표시
+            setUser({
+              id: authUser.id,
+              email: authUser.email || '',
+              display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+              role: null,
+              workplace_name: null,
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at || authUser.created_at,
+            } as Profile)
           }
         } else {
           console.log('Header: No auth user')
@@ -87,26 +120,68 @@ export function Header() {
       if (session?.user) {
         try {
           console.log('Header: Fetching profile on auth change for user:', session.user.id)
-          const { data: profile, error: profileError } = await supabase
+          
+          // 타임아웃 설정 (5초)
+          const profilePromise = supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single()
           
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+          )
+          
+          const { data: profile, error: profileError } = await Promise.race([
+            profilePromise,
+            timeoutPromise
+          ]) as { data: any, error: any }
+          
           if (profileError) {
             console.error('Header: Profile error on auth change:', profileError)
             console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
-            setUser(null)
+            // 프로필이 없어도 기본 정보로 사용자 표시
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+              role: null,
+              workplace_name: null,
+              created_at: session.user.created_at,
+              updated_at: session.user.updated_at || session.user.created_at,
+            } as Profile)
           } else if (profile) {
             console.log('Header: Profile loaded on auth change:', profile.display_name, profile.email)
             setUser(profile)
           } else {
-            console.log('Header: No profile found on auth change')
-            setUser(null)
+            console.log('Header: No profile found on auth change, using auth user data')
+            // 프로필이 없어도 기본 정보로 사용자 표시
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+              role: null,
+              workplace_name: null,
+              created_at: session.user.created_at,
+              updated_at: session.user.updated_at || session.user.created_at,
+            } as Profile)
           }
         } catch (error) {
           console.error('Header: Unexpected error on auth change:', error)
-          setUser(null)
+          // 에러가 발생해도 세션 정보로 사용자 표시
+          if (session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+              role: null,
+              workplace_name: null,
+              created_at: session.user.created_at,
+              updated_at: session.user.updated_at || session.user.created_at,
+            } as Profile)
+          } else {
+            setUser(null)
+          }
         }
       } else {
         console.log('Header: No session on auth change')
