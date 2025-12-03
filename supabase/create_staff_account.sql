@@ -50,7 +50,7 @@ BEGIN
       RAISE NOTICE '이메일: %', staff_email;
       RAISE NOTICE '역할: %', staff_role;
     ELSE
-      -- 프로필이 없으면 생성
+      -- 프로필이 없으면 생성 (ON CONFLICT로 안전하게 처리)
       INSERT INTO public.profiles (
         id,
         email,
@@ -67,9 +67,14 @@ BEGIN
         'MediFirst 운영팀',
         NOW(),
         NOW()
-      );
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        role = EXCLUDED.role,
+        display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), profiles.display_name),
+        workplace_name = COALESCE(NULLIF(EXCLUDED.workplace_name, ''), profiles.workplace_name),
+        updated_at = NOW();
       
-      RAISE NOTICE '기존 사용자에 대한 프로필을 생성했습니다.';
+      RAISE NOTICE '기존 사용자에 대한 프로필을 생성/업데이트했습니다.';
       RAISE NOTICE '이메일: %', staff_email;
       RAISE NOTICE '역할: %', staff_role;
     END IF;
@@ -115,7 +120,7 @@ BEGIN
       ''
     );
 
-    -- profiles 테이블에 프로필 생성
+    -- profiles 테이블에 프로필 생성 (ON CONFLICT로 안전하게 처리)
     INSERT INTO public.profiles (
       id,
       email,
@@ -132,7 +137,12 @@ BEGIN
       'MediFirst 운영팀',
       NOW(),
       NOW()
-    );
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      role = EXCLUDED.role,
+      display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), profiles.display_name),
+      workplace_name = COALESCE(NULLIF(EXCLUDED.workplace_name, ''), profiles.workplace_name),
+      updated_at = NOW();
 
     RAISE NOTICE '새 스텝 계정이 생성되었습니다!';
     RAISE NOTICE '이메일: %', staff_email;
