@@ -252,27 +252,21 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
               <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed mb-2">
                 {comment.content}
               </p>
-              <div className="flex items-center gap-4">
-                {/* 추천 버튼 (침하하 스타일) */}
+              <div className="flex items-center gap-3">
+                {/* 추천 버튼 */}
                 <button
                   onClick={handleLike}
                   disabled={liking}
-                  className={`flex flex-col items-center gap-1 transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all ${
                     liked 
-                      ? 'text-emerald-500' 
-                      : 'text-slate-500 dark:text-slate-400 hover:text-emerald-500'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' 
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400'
                   } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all ${
-                    liked 
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20' 
-                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-                  }`}>
-                    <ThumbsUp className={`h-4 w-4 ${liked ? 'fill-current' : ''}`} />
-                  </div>
-                  <span className="text-[10px] font-medium">추천</span>
+                  <ThumbsUp className={`h-3.5 w-3.5 ${liked ? 'fill-current' : ''}`} />
+                  <span className="text-xs font-medium">추천</span>
                   {likeCount > 0 && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{likeCount}</span>
+                    <span className="text-xs font-medium">{likeCount}</span>
                   )}
                 </button>
                 
@@ -280,10 +274,10 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
                 {!isReply && (
                   <button
                     onClick={() => setIsReplying(!isReplying)}
-                    className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-slate-200 transition-all"
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="text-xs">댓글쓰기</span>
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">댓글쓰기</span>
                   </button>
                 )}
               </div>
