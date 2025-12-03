@@ -291,8 +291,20 @@ export function Header() {
   }, [supabase])
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('로그아웃 오류:', error)
+        alert('로그아웃 중 오류가 발생했습니다.')
+        return
+      }
+      // 세션 제거 후 완전히 페이지 새로고침
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('로그아웃 예외:', error)
+      // 에러가 발생해도 강제로 로그인 페이지로 이동
+      window.location.href = '/login'
+    }
   }
 
   return (
