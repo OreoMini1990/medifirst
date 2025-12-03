@@ -3,6 +3,7 @@
 import { PartnerNav } from '@/components/startup/PartnerNav'
 import { PartnerCard } from '@/components/startup/PartnerCard'
 import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
 // 임시 파트너 데이터
 const partnerData = [
@@ -88,7 +89,7 @@ const partnerData = [
   },
 ]
 
-export default function StartupPage() {
+function StartupContent() {
   const searchParams = useSearchParams()
   const category = searchParams.get('category') || 'tax'
 
@@ -123,5 +124,13 @@ export default function StartupPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function StartupPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">로딩 중...</div>}>
+      <StartupContent />
+    </Suspense>
   )
 }

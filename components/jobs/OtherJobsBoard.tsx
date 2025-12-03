@@ -232,7 +232,7 @@ export function OtherJobsBoard() {
               positionLabel={positionLabels[job.position] || job.position}
               region={job.region}
               employmentTypeLabel={employmentTypeLabels[job.employment_type] || job.employment_type}
-              hospitalName={job.profiles?.workplace_name || job.profiles?.display_name || null}
+              hospitalName={(job.profiles as any)?.workplace_name || job.profiles?.display_name || null}
               createdAt={job.created_at}
             />
           ))}

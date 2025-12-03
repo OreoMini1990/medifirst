@@ -17,6 +17,8 @@ const roleLabels: Record<UserRole, string> = {
   pt: '물리치료사',
   rt: '방사선사',
   admin_staff: '행정·원무',
+  manager: '원장/관리자',
+  etc: '기타',
 }
 
 // 직역명을 2글자로 줄이는 함수
@@ -241,9 +243,8 @@ export function AllPostsBoard() {
               title={post.title}
               boardTag={getBoardTag(post, userRole)}
               authorName={post.profiles?.display_name || '익명'}
-              avatarUrl={post.profiles?.avatar_url || null}
               commentCount={post.commentCount || 0}
-                likeCount={post.like_count || 0}
+              likeCount={post.like_count || 0}
               viewCount={post.view_count || 0}
               createdAt={post.created_at}
             />

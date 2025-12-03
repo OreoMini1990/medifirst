@@ -4,10 +4,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DoctorJobsBoard } from '@/components/jobs/DoctorJobsBoard'
 import { OtherJobsBoard } from '@/components/jobs/OtherJobsBoard'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function JobsPage() {
+function JobsContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const typeParam = searchParams.get('type')
@@ -115,5 +115,13 @@ export default function JobsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">로딩 중...</div>}>
+      <JobsContent />
+    </Suspense>
   )
 }

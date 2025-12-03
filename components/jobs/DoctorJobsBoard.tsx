@@ -228,7 +228,7 @@ export function DoctorJobsBoard() {
               positionLabel="의사"
               region={job.region}
               employmentTypeLabel={employmentTypeLabels[job.employment_type] || job.employment_type}
-              hospitalName={job.profiles?.workplace_name || job.profiles?.display_name || null}
+              hospitalName={(job.profiles as any)?.workplace_name || job.profiles?.display_name || null}
               createdAt={job.created_at}
             />
           ))}

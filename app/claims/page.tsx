@@ -4,9 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { NoticeBoard } from '@/components/claims/NoticeBoard'
 import { QABoard } from '@/components/claims/QABoard'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
-export default function ClaimsPage() {
+function ClaimsContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const [defaultTab, setDefaultTab] = useState<'notice' | 'qa'>('notice')
@@ -39,6 +39,14 @@ export default function ClaimsPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function ClaimsPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">로딩 중...</div>}>
+      <ClaimsContent />
+    </Suspense>
   )
 }
 

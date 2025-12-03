@@ -6,9 +6,9 @@ import { RoleCommunity } from '@/components/community/RoleCommunity'
 import { FreeBoard } from '@/components/community/FreeBoard'
 import { QABoard } from '@/components/community/QABoard'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
-export default function CommunityPage() {
+function CommunityContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
   const [defaultTab, setDefaultTab] = useState<'all' | 'role' | 'free' | 'qa'>('all')
@@ -49,6 +49,14 @@ export default function CommunityPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">로딩 중...</div>}>
+      <CommunityContent />
+    </Suspense>
   )
 }
 
