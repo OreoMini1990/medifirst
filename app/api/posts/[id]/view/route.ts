@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
-    const postId = params.id
+    const { id } = await params
+    const postId = id
 
     // post_views 테이블이 없을 수 있으므로, 먼저 view_count만 증가시키고
     // post_views 테이블이 있으면 중복 체크를 수행
