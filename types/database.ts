@@ -74,14 +74,17 @@ export interface Comment {
   id: string
   post_id: string
   author_id: string
+  parent_id: string | null
   content: string
   created_at: string
   updated_at: string
   deleted_at: string | null
+  like_count?: number
   profiles?: {
     display_name: string | null
     role: UserRole | null
   }
+  replies?: Comment[]
 }
 
 export interface Job {

@@ -380,6 +380,7 @@ export default function ClaimsQADetailPage() {
           <CommentList
             comments={comments}
             currentUserId={currentUserId}
+            postAuthorId={post?.author_id || null}
             onUpdate={fetchComments}
           />
         </section>

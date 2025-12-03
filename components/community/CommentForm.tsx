@@ -8,10 +8,11 @@ import { ImageIcon, Smile, MessageCircle } from 'lucide-react'
 
 interface CommentFormProps {
   postId: string
+  parentId?: string | null
   onSubmit: () => void
 }
 
-export function CommentForm({ postId, onSubmit }: CommentFormProps) {
+export function CommentForm({ postId, parentId = null, onSubmit }: CommentFormProps) {
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const supabase = createClient()
@@ -35,6 +36,7 @@ export function CommentForm({ postId, onSubmit }: CommentFormProps) {
       .from('comments')
       .insert({
         post_id: postId,
+        parent_id: parentId,
         author_id: user.id,
         content: content.trim(),
       })

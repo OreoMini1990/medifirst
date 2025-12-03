@@ -314,35 +314,30 @@ export default function FreePostDetailPage() {
           </div>
         </article>
 
-        {/* 추천 버튼 */}
-        <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex flex-col items-center gap-3">
+        {/* 추천 버튼 (침하하 스타일) */}
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col items-center gap-2">
             <button
               onClick={handleLike}
               disabled={liking}
-              className={`group relative flex flex-col items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+              className={`flex flex-col items-center gap-1 transition-all ${
                 liked 
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40' 
-                  : 'bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-200 hover:from-slate-200 hover:to-slate-100 dark:hover:from-slate-700 dark:hover:to-slate-600 shadow-md hover:shadow-lg'
-              } ${liking ? 'opacity-50 cursor-not-allowed scale-100' : 'cursor-pointer'} min-w-[200px]`}
+                  ? 'text-emerald-500' 
+                  : 'text-slate-500 dark:text-slate-400 hover:text-emerald-500'
+              } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              <div className="flex items-center gap-2">
-                <ThumbsUp className={`h-6 w-6 transition-transform duration-200 ${liked ? 'fill-current' : ''} group-hover:scale-110`} />
-                <span className="text-base">{liked ? '추천 취소' : '이 글 추천하기'}</span>
+              <div className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
+                liked 
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20' 
+                  : 'bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+              }`}>
+                <ThumbsUp className={`h-6 w-6 ${liked ? 'fill-current' : ''}`} />
               </div>
+              <span className="text-xs font-medium">침하하</span>
               {likeCount > 0 && (
-                <div className={`text-sm font-normal mt-1 ${
-                  liked ? 'text-emerald-50' : 'text-slate-500 dark:text-slate-400'
-                }`}>
-                  {likeCount}명이 추천했습니다
-                </div>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{likeCount}</span>
               )}
             </button>
-            {likeCount === 0 && !liked && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-                이 글이 도움이 되었다면 추천해주세요
-              </p>
-            )}
           </div>
         </div>
       </section>
@@ -391,6 +386,7 @@ export default function FreePostDetailPage() {
         <CommentList
           comments={comments}
           currentUserId={currentUserId}
+          postAuthorId={post?.author_id || null}
           onUpdate={fetchComments}
         />
       </section>

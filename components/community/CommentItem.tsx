@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,20 +12,77 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Comment } from '@/types/database'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, ThumbsUp, MessageCircle, MoreHorizontal } from 'lucide-react'
+import { CommentForm } from './CommentForm'
 
 interface CommentItemProps {
   comment: Comment
   currentUserId: string | null
+  postAuthorId: string | null
   onUpdate: () => void
+  isReply?: boolean
 }
 
-export function CommentItem({ comment, currentUserId, onUpdate }: CommentItemProps) {
+export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, isReply = false }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [isReplying, setIsReplying] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(comment.like_count || 0)
+  const [liking, setLiking] = useState(false)
+  const [replies, setReplies] = useState<Comment[]>(comment.replies || [])
   const supabase = createClient()
+
+  const isOwner = currentUserId === comment.author_id
+  const isAuthor = postAuthorId === comment.author_id
+
+  useEffect(() => {
+    fetchLikeStatus()
+    fetchReplies()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comment.id, currentUserId])
+
+  async function fetchLikeStatus() {
+    if (!currentUserId) return
+    
+    try {
+      const response = await fetch(`/api/comments/${comment.id}/like`)
+      const data = await response.json()
+      if (data.success) {
+        setLiked(data.liked || false)
+        setLikeCount(data.likeCount || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching like status:', error)
+    }
+  }
+
+  async function fetchReplies() {
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles:author_id (
+            display_name,
+            role
+          )
+        `)
+        .eq('parent_id', comment.id)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Error fetching replies:', error)
+      } else {
+        setReplies(data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching replies:', error)
+    }
+  }
 
   const handleUpdate = async () => {
     if (!editContent.trim()) return
@@ -69,7 +126,37 @@ export function CommentItem({ comment, currentUserId, onUpdate }: CommentItemPro
     setDeleting(false)
   }
 
-  const isOwner = currentUserId === comment.author_id
+  const handleLike = async () => {
+    if (!currentUserId) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    if (liking) return
+
+    setLiking(true)
+    try {
+      const response = await fetch(`/api/comments/${comment.id}/like`, {
+        method: 'POST',
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setLiked(data.liked)
+        setLikeCount(data.likeCount || 0)
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      setLiking(false)
+    }
+  }
+
+  const handleReplySubmit = () => {
+    setIsReplying(false)
+    fetchReplies()
+    onUpdate()
+  }
 
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -92,90 +179,148 @@ export function CommentItem({ comment, currentUserId, onUpdate }: CommentItemPro
   }
 
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-          {(comment.profiles?.display_name || '익명')[0]?.toUpperCase() || '?'}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-sm text-slate-900 dark:text-slate-100">
-            {comment.profiles?.display_name || '익명'}
-          </span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            {formatRelativeTime(comment.created_at)}
-          </span>
-          {isOwner && !isEditing && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto">
-                  <span className="sr-only">메뉴</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                  </svg>
+    <div className={`${isReply ? 'ml-8 mt-3' : ''}`}>
+      <div className="flex items-start gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+            {(comment.profiles?.display_name || '익명')[0]?.toUpperCase() || '?'}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`font-medium text-sm ${isAuthor ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
+              {comment.profiles?.display_name || '익명'}
+            </span>
+            {isAuthor && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                글쓴이
+              </span>
+            )}
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              {formatRelativeTime(comment.created_at)}
+            </span>
+            {isOwner && !isEditing && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    수정
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={deleting}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deleting ? '삭제 중...' : '삭제'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={3}
+                className="text-sm"
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleUpdate}
+                  disabled={saving || !editContent.trim()}
+                >
+                  {saving ? '저장 중...' : '저장'}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  수정
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive" disabled={deleting}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  {deleting ? '삭제 중...' : '삭제'}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false)
+                    setEditContent(comment.content)
+                  }}
+                >
+                  취소
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed mb-2">
+                {comment.content}
+              </p>
+              <div className="flex items-center gap-4">
+                {/* 추천 버튼 (침하하 스타일) */}
+                <button
+                  onClick={handleLike}
+                  disabled={liking}
+                  className={`flex flex-col items-center gap-1 transition-all ${
+                    liked 
+                      ? 'text-emerald-500' 
+                      : 'text-slate-500 dark:text-slate-400 hover:text-emerald-500'
+                  } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+                    liked 
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20' 
+                      : 'bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                  }`}>
+                    <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
+                  </div>
+                  <span className="text-xs font-medium">침하하</span>
+                  {likeCount > 0 && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{likeCount}</span>
+                  )}
+                </button>
+                
+                {/* 댓글쓰기 버튼 */}
+                {!isReply && (
+                  <button
+                    onClick={() => setIsReplying(!isReplying)}
+                    className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="text-xs">댓글쓰기</span>
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
-        {isEditing ? (
-          <div className="space-y-2">
-            <Textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              rows={3}
-              className="text-sm"
-            />
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleUpdate}
-                disabled={saving || !editContent.trim()}
-              >
-                {saving ? '저장 중...' : '저장'}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setIsEditing(false)
-                  setEditContent(comment.content)
-                }}
-              >
-                취소
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-            {comment.content}
-          </p>
-        )}
       </div>
+
+      {/* 대댓글 작성 폼 */}
+      {isReplying && !isReply && (
+        <div className="ml-11 mt-2">
+          <CommentForm 
+            postId={comment.post_id} 
+            parentId={comment.id}
+            onSubmit={handleReplySubmit}
+          />
+        </div>
+      )}
+
+      {/* 대댓글 목록 */}
+      {replies.length > 0 && (
+        <div className="ml-11 mt-2">
+          {replies.map((reply) => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              currentUserId={currentUserId}
+              postAuthorId={postAuthorId}
+              onUpdate={() => {
+                fetchReplies()
+                onUpdate()
+              }}
+              isReply={true}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
-

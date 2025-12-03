@@ -340,6 +340,7 @@ export default function NoticeDetailPage() {
         <CommentList
           comments={comments}
           currentUserId={currentUserId}
+          postAuthorId={post?.author_id || null}
           onUpdate={fetchComments}
         />
       </section>
