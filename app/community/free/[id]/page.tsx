@@ -313,6 +313,25 @@ export default function FreePostDetailPage() {
             {post.content || '(내용 없음)'}
           </div>
         </article>
+
+        {/* 추천 버튼 */}
+        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
+              liked 
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+            } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
+            <span>{liked ? '추천 취소' : '이 글 추천하기'}</span>
+            {likeCount > 0 && (
+              <span className="ml-1 text-sm opacity-90">({likeCount})</span>
+            )}
+          </button>
+        </div>
       </section>
 
       {/* 이전글 / 다음글 / 목록 버튼 */}
