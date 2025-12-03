@@ -167,7 +167,7 @@ export function NoticeBoard() {
               href={`/claims/notice/${post.id}`}
               title={post.title}
               authorName={post.profiles?.display_name || '익명'}
-              avatarUrl={post.profiles?.avatar_url || null}
+              avatarUrl={null}
               commentCount={post.commentCount || 0}
               likeCount={0}
               viewCount={post.view_count || 0}
