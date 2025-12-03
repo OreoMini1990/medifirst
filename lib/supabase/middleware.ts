@@ -2,13 +2,22 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // 환경 변수가 없으면 미들웨어를 건너뜀
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Supabase environment variables are not set. Skipping middleware.')
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -31,9 +40,17 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser()
+    user = authUser
+  } catch (error) {
+    console.error('Middleware: Error getting user:', error)
+    // 에러 발생 시에도 계속 진행 (인증되지 않은 사용자로 처리)
+    user = null
+  }
 
   if (
     !user &&
@@ -54,15 +71,23 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse
     }
 
-    // 프로필 조회
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('role, workplace_name')
-      .eq('id', user.id)
-      .single()
+    try {
+      // 프로필 조회
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role, workplace_name')
+        .eq('id', user.id)
+        .single()
 
-    // 프로필이 없거나 role 또는 workplace_name이 없으면 온보딩 페이지로 리다이렉트
-    if (profileError || !profile || !profile.role || !profile.workplace_name) {
+      // 프로필이 없거나 role 또는 workplace_name이 없으면 온보딩 페이지로 리다이렉트
+      if (profileError || !profile || !profile.role || !profile.workplace_name) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/onboarding'
+        return NextResponse.redirect(url)
+      }
+    } catch (error) {
+      console.error('Middleware: Error fetching profile:', error)
+      // 프로필 조회 실패 시 온보딩 페이지로 리다이렉트
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)
