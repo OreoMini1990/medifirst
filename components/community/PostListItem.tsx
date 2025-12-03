@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { MessageCircle, Eye, ThumbsUp } from 'lucide-react'
+import { MessageCircle, Eye, ThumbsUp, Lock } from 'lucide-react'
 
 interface PostListItemProps {
   href: string
@@ -15,6 +15,7 @@ interface PostListItemProps {
   likeCount: number
   viewCount: number
   createdAt: string | Date
+  isLocked?: boolean // 잠금 아이콘 표시 여부
 }
 
 export function PostListItem({
@@ -28,6 +29,7 @@ export function PostListItem({
   likeCount,
   viewCount,
   createdAt,
+  isLocked = false,
 }: PostListItemProps) {
   const formatRelativeTime = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString
@@ -53,7 +55,12 @@ export function PostListItem({
   }
 
   return (
-    <li>
+    <li className="relative">
+      {isLocked && (
+        <div className="absolute left-4 top-4 z-10 flex items-center gap-1">
+          <Lock className="h-3.5 w-3.5 text-slate-400" />
+        </div>
+      )}
       <Link href={href}>
         <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-100 dark:border-slate-800 transition-colors">
           {/* 왼쪽 아바타 */}

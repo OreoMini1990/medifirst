@@ -5,35 +5,21 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
-import type { Post, Comment, UserRole } from '@/types/database'
-import { ArrowLeft, ArrowRight, Edit, Trash2, List } from 'lucide-react'
+import type { Post, Comment } from '@/types/database'
+import { ArrowLeft, ArrowRight, Edit, Trash2, Eye, ThumbsUp, List } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CommentItem } from '@/components/community/CommentItem'
 import { CommentList } from '@/components/community/CommentList'
 import { CommentForm } from '@/components/community/CommentForm'
 import { PostListItem } from '@/components/community/PostListItem'
-import { Eye, ThumbsUp } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
-const roleLabels: Record<UserRole, string> = {
-  doctor: '의사',
-  nurse: '간호사',
-  assistant: '간호조무사',
-  pt: '물리치료사',
-  rt: '방사선사',
-  admin_staff: '행정·원무',
-}
-
-export default function PostDetailPage() {
+export default function NoticeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [post, setPost] = useState<Post | null>(null)
@@ -61,54 +47,16 @@ export default function PostDetailPage() {
 
   useEffect(() => {
     if (post && params.id && !loading) {
-      // 조회수 증가 API 호출 (에러는 무시)
       fetch(`/api/posts/${params.id}/view`, {
         method: 'POST',
-      }).catch(() => {
-        // 조회수 증가 실패는 무시 (post_views 테이블이 없을 수 있음)
-      })
+      }).catch(() => {})
     }
   }, [post?.id, params.id, loading])
-
-  useEffect(() => {
-    let isMounted = true
-    let hasChecked = false
-
-    async function checkAccess() {
-      if (!post || !currentUserId || !isMounted || hasChecked) return
-
-      // 게시글이 직역별 커뮤니티인지 확인
-      if (post.sub_board !== 'role') return
-
-      hasChecked = true
-
-      // 사용자 프로필에서 role 조회
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', currentUserId)
-        .single()
-
-      // 사용자 role과 게시글 category 비교
-      if (isMounted && profile?.role && post.category && profile.role !== post.category) {
-        alert('접근 권한이 없습니다. 본인의 직역 게시판만 확인할 수 있습니다.')
-        router.push('/community?tab=role')
-        return
-      }
-    }
-
-    if (post && currentUserId) {
-      checkAccess()
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [post?.id, currentUserId]) // post 전체가 아닌 post.id만 의존성으로
 
   async function fetchPost() {
     try {
       setLoading(true)
+      console.log('Notice: Fetching post with id:', params.id)
       const { data, error } = await supabase
         .from('posts')
         .select('*, profiles!author_id(display_name, role)')
@@ -116,52 +64,34 @@ export default function PostDetailPage() {
         .single()
 
       if (error) {
-        console.error('Error fetching post:', error.message || error)
+        console.error('Notice: Error fetching post:', error.message || error)
+        console.error('Notice: Error details:', JSON.stringify(error, null, 2))
+        console.error('Notice: Post ID:', params.id)
         setPost(null)
         setLoading(false)
       } else if (data) {
-        console.log('Post fetched:', data.title, 'Content length:', data.content?.length || 0)
+        console.log('Notice: Post fetched successfully:', { id: data.id, title: data.title, board: data.board, sub_board: data.sub_board })
         setPost(data)
         fetchComments()
-        fetchRelatedPosts(data) // post 상태 대신 data를 직접 전달
-        fetchPrevNextPosts(data) // post 상태 대신 data를 직접 전달
+        fetchRelatedPosts(data)
+        fetchPrevNextPosts(data)
         setLoading(false)
       } else {
+        console.error('Notice: No data returned for post ID:', params.id)
         setPost(null)
         setLoading(false)
       }
     } catch (err) {
-      console.error('Unexpected error fetching post:', err)
+      console.error('Notice: Unexpected error fetching post:', err)
       setPost(null)
       setLoading(false)
-    }
-  }
-
-  async function checkAccess() {
-    if (!post || !currentUserId) return
-
-    // 게시글이 직역별 커뮤니티인지 확인
-    if (post.sub_board !== 'role') return
-
-    // 사용자 프로필에서 role 조회
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', currentUserId)
-      .single()
-
-    // 사용자 role과 게시글 category 비교
-    if (profile?.role && post.category && profile.role !== post.category) {
-      alert('접근 권한이 없습니다. 본인의 직역 게시판만 확인할 수 있습니다.')
-      router.push('/community')
-      return
     }
   }
 
   async function fetchComments() {
     const { data, error } = await supabase
       .from('comments')
-      .select('*, profiles!author_id(display_name, role)')
+      .select('*, profiles!author_id(display_name, role, avatar_url)')
       .eq('post_id', params.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
@@ -175,50 +105,51 @@ export default function PostDetailPage() {
 
   async function fetchPrevNextPosts(postData?: Post) {
     const targetPost = postData || post
-    if (!targetPost?.category) return
+    if (!targetPost) return
 
     const currentDate = new Date(targetPost.created_at)
 
-    // 이전글 (더 최신)
     const { data: prevData, error: prevError } = await supabase
       .from('posts')
       .select('id, title')
-      .eq('board', 'community')
-      .eq('sub_board', 'role')
-      .eq('category', targetPost.category)
+      .eq('board', 'claims')
+      .eq('sub_board', 'notice')
       .gt('created_at', currentDate.toISOString())
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
-    // 다음글 (더 오래됨)
     const { data: nextData, error: nextError } = await supabase
       .from('posts')
       .select('id, title')
-      .eq('board', 'community')
-      .eq('sub_board', 'role')
-      .eq('category', targetPost.category)
+      .eq('board', 'claims')
+      .eq('sub_board', 'notice')
       .lt('created_at', currentDate.toISOString())
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
+    if (prevError) console.error('Error fetching previous post:', prevError)
+    if (nextError) console.error('Error fetching next post:', nextError)
+
     if (!prevError && prevData) setPrevPost(prevData as Post)
+    else setPrevPost(null)
+    
     if (!nextError && nextData) setNextPost(nextData as Post)
+    else setNextPost(null)
   }
 
   async function fetchRelatedPosts(postData?: Post) {
     const targetPost = postData || post
-    if (!targetPost?.category) return
+    if (!targetPost) return
 
     const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles!author_id(display_name, role)')
-      .eq('board', 'community')
-      .eq('sub_board', 'role')
-      .eq('category', targetPost.category) // 같은 직역 게시글만 표시
+      .select('*, profiles!author_id(display_name, role, avatar_url)')
+      .eq('board', 'claims')
+      .eq('sub_board', 'notice')
       .neq('id', params.id as string)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -256,9 +187,32 @@ export default function PostDetailPage() {
       alert('삭제 중 오류가 발생했습니다.')
       console.error('Error deleting post:', error)
     } else {
-      router.push('/community?tab=role')
+      router.push('/claims?tab=notice')
       router.refresh()
     }
+  }
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor(diff / (1000 * 60))
+
+    if (days > 7) {
+      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+    }
+    if (days > 0) {
+      return days === 1 ? '어제' : `${days}일 전`
+    }
+    if (hours > 0) {
+      return `${hours}시간 전`
+    }
+    if (minutes > 0) {
+      return `${minutes}분 전`
+    }
+    return '방금 전'
   }
 
   if (loading) {
@@ -271,6 +225,41 @@ export default function PostDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* 이전글 / 다음글 / 목록 버튼 */}
+      <div className="flex items-center justify-between border-b border-t border-slate-200 dark:border-slate-800 py-4">
+        <Button variant="ghost" size="sm" asChild className="flex-1 justify-start">
+          {prevPost ? (
+            <Link href={`/claims/notice/${prevPost.id}`}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              <span className="truncate max-w-[200px]">{prevPost.title}</span>
+            </Link>
+          ) : (
+            <div className="text-muted-foreground cursor-not-allowed">
+              <ArrowLeft className="mr-2 h-4 w-4 inline" />
+              이전글
+            </div>
+          )}
+        </Button>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/claims?tab=notice">
+            <List className="mr-2 h-4 w-4" />
+            목록
+          </Link>
+        </Button>
+        <Button variant="ghost" size="sm" asChild className="flex-1 justify-end">
+          {nextPost ? (
+            <Link href={`/claims/notice/${nextPost.id}`}>
+              <span className="truncate max-w-[200px]">{nextPost.title}</span>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          ) : (
+            <div className="text-muted-foreground cursor-not-allowed">
+              다음글
+              <ArrowRight className="ml-2 h-4 w-4 inline" />
+            </div>
+          )}
+        </Button>
+      </div>
 
       {/* 게시글 상세 */}
       <section className="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 p-6">
@@ -296,18 +285,7 @@ export default function PostDetailPage() {
             조회 {post.view_count || 0}
           </span>
           <span>
-            {(() => {
-              const date = new Date(post.created_at)
-              const now = new Date()
-              const diff = now.getTime() - date.getTime()
-              const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-              const hours = Math.floor(diff / (1000 * 60 * 60))
-              const minutes = Math.floor(diff / (1000 * 60))
-              if (days > 0) return days === 1 ? '어제' : `${days}일 전`
-              if (hours > 0) return `${hours}시간 전`
-              if (minutes > 0) return `${minutes}분 전`
-              return '방금 전'
-            })()}
+            {formatRelativeTime(post.created_at)}
           </span>
           {currentUserId === post.author_id && (
             <DropdownMenu>
@@ -333,7 +311,7 @@ export default function PostDetailPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href={`/community/role/edit/${post.id}`}>
+                  <Link href={`/claims/notice/edit/${post.id}`}>
                     <Edit className="mr-2 h-4 w-4" />
                     수정
                   </Link>
@@ -353,42 +331,6 @@ export default function PostDetailPage() {
           </div>
         </article>
       </section>
-
-      {/* 이전글 / 다음글 / 목록 버튼 */}
-      <div className="flex items-center justify-between border-b border-t border-slate-200 dark:border-slate-800 py-4">
-        <Button variant="ghost" size="sm" asChild className="flex-1 justify-start">
-          {prevPost ? (
-            <Link href={`/community/role/${prevPost.id}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              <span className="truncate max-w-[200px]">{prevPost.title}</span>
-            </Link>
-          ) : (
-            <div className="text-muted-foreground cursor-not-allowed">
-              <ArrowLeft className="mr-2 h-4 w-4 inline" />
-              이전글
-            </div>
-          )}
-        </Button>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/community?tab=role">
-            <List className="mr-2 h-4 w-4" />
-            목록
-          </Link>
-        </Button>
-        <Button variant="ghost" size="sm" asChild className="flex-1 justify-end">
-          {nextPost ? (
-            <Link href={`/community/role/${nextPost.id}`}>
-              <span className="truncate max-w-[200px]">{nextPost.title}</span>
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          ) : (
-            <div className="text-muted-foreground cursor-not-allowed">
-              다음글
-              <ArrowRight className="ml-2 h-4 w-4 inline" />
-            </div>
-          )}
-        </Button>
-      </div>
 
       {/* 댓글 섹션 */}
       <section className="bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 p-6">
@@ -410,11 +352,10 @@ export default function PostDetailPage() {
             {relatedPosts.map((p) => (
               <PostListItem
                 key={p.id}
-                href={`/community/role/${p.id}`}
+                href={`/claims/notice/${p.id}`}
                 title={p.title}
-                categoryLabel={undefined}
                 authorName={p.profiles?.display_name || '익명'}
-                avatarUrl={null}
+                avatarUrl={p.profiles?.avatar_url || null}
                 commentCount={p.commentCount || 0}
                 likeCount={0}
                 viewCount={p.view_count || 0}

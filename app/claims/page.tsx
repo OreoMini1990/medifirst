@@ -1,4 +1,22 @@
+'use client'
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { NoticeBoard } from '@/components/claims/NoticeBoard'
+import { QABoard } from '@/components/claims/QABoard'
+import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+
 export default function ClaimsPage() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [defaultTab, setDefaultTab] = useState<'notice' | 'qa'>('notice')
+
+  useEffect(() => {
+    if (tabParam === 'notice' || tabParam === 'qa') {
+      setDefaultTab(tabParam)
+    }
+  }, [tabParam])
+
   return (
     <div className="space-y-6">
       <div>
@@ -8,14 +26,18 @@ export default function ClaimsPage() {
         </p>
       </div>
 
-      <div className="text-center py-16">
-        <p className="text-lg text-muted-foreground">
-          심사청구 기능은 준비 중입니다.
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          곧 만나보실 수 있습니다.
-        </p>
-      </div>
+      <Tabs value={defaultTab} onValueChange={(value) => setDefaultTab(value as 'notice' | 'qa')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="notice">최신고시</TabsTrigger>
+          <TabsTrigger value="qa">심사청구 Q&A</TabsTrigger>
+        </TabsList>
+        <TabsContent value="notice" className="mt-6">
+          <NoticeBoard />
+        </TabsContent>
+        <TabsContent value="qa" className="mt-6">
+          <QABoard />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

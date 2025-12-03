@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS posts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   author_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   board TEXT NOT NULL CHECK (board IN ('community', 'startup', 'claims', 'academy')),
-  sub_board TEXT CHECK (sub_board IN ('role', 'free', 'qa')),
+  sub_board TEXT CHECK (sub_board IN ('role', 'free', 'qa', 'notice')),
   category TEXT,
   title TEXT NOT NULL,
   content TEXT NOT NULL,

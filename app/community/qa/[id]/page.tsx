@@ -68,7 +68,7 @@ export default function QAPostDetailPage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles!author_id(display_name, role, avatar_url)')
+        .select('*, profiles!author_id(display_name, role)')
         .eq('id', params.id)
         .single()
 
@@ -364,7 +364,7 @@ export default function QAPostDetailPage() {
                 title={p.title}
                 categoryLabel={p.category ? categoryLabels[p.category] : undefined}
                 authorName={p.profiles?.display_name || '익명'}
-                avatarUrl={p.profiles?.avatar_url || null}
+                avatarUrl={null}
                 commentCount={p.commentCount || 0}
                 likeCount={0}
                 viewCount={p.view_count || 0}
