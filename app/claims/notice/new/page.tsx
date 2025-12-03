@@ -83,60 +83,98 @@ export default function NewNoticePage() {
       return
     }
     
+    if (!title.trim() || !content.trim()) {
+      setError('제목과 내용을 입력해주세요.')
+      return
+    }
+    
     setSaving(true)
     setError(null)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setError('로그인이 필요합니다.')
-      setSaving(false)
-      return
-    }
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError) {
+        console.error('Auth error:', authError)
+        setError('인증 오류가 발생했습니다.')
+        setSaving(false)
+        return
+      }
+      
+      if (!user) {
+        setError('로그인이 필요합니다.')
+        setSaving(false)
+        return
+      }
 
-    const { data: newPost, error: insertError } = await supabase
-      .from('posts')
-      .insert({
+      console.log('Creating notice post with:', {
         author_id: user.id,
         board: 'claims',
         sub_board: 'notice',
-        category: null,
-        title,
-        content,
-        is_question: false,
-        is_pinned: false,
+        title: title.trim(),
+        content_length: content.trim().length
       })
-      .select()
-      .single()
 
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      console.error('Insert error code:', insertError.code)
-      console.error('Insert error message:', insertError.message)
-      console.error('Insert error details:', JSON.stringify(insertError, null, 2))
-      console.error('Insert error hint:', insertError.hint)
-      
-      // 더 자세한 에러 메시지
-      let errorMessage = insertError.message || '게시글 작성에 실패했습니다.'
-      if (insertError.code === '23514') {
-        errorMessage = '데이터베이스 제약 조건 오류: sub_board 값이 유효하지 않습니다. (notice가 허용되지 않을 수 있습니다)'
-      } else if (insertError.code === '23503') {
-        errorMessage = '외래 키 제약 조건 오류: 작성자 정보가 유효하지 않습니다.'
-      } else if (insertError.hint) {
-        errorMessage = `${errorMessage} (힌트: ${insertError.hint})`
+      // 타임아웃 설정 (10초)
+      const insertPromise = supabase
+        .from('posts')
+        .insert({
+          author_id: user.id,
+          board: 'claims',
+          sub_board: 'notice',
+          category: null,
+          title: title.trim(),
+          content: content.trim(),
+          is_question: false,
+          is_pinned: false,
+        })
+        .select()
+        .single()
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('요청 시간이 초과되었습니다.')), 10000)
+      )
+
+      const { data: newPost, error: insertError } = await Promise.race([
+        insertPromise,
+        timeoutPromise
+      ]) as { data: any, error: any }
+
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        console.error('Insert error code:', insertError.code)
+        console.error('Insert error message:', insertError.message)
+        console.error('Insert error details:', JSON.stringify(insertError, null, 2))
+        console.error('Insert error hint:', insertError.hint)
+        
+        // 더 자세한 에러 메시지
+        let errorMessage = insertError.message || '게시글 작성에 실패했습니다.'
+        if (insertError.code === '23514') {
+          errorMessage = '데이터베이스 제약 조건 오류: sub_board 값이 유효하지 않습니다. (notice가 허용되지 않을 수 있습니다)'
+        } else if (insertError.code === '23503') {
+          errorMessage = '외래 키 제약 조건 오류: 작성자 정보가 유효하지 않습니다.'
+        } else if (insertError.message?.includes('timeout') || insertError.message?.includes('시간이 초과')) {
+          errorMessage = '요청 시간이 초과되었습니다. 네트워크 연결을 확인하고 다시 시도해주세요.'
+        } else if (insertError.hint) {
+          errorMessage = `${errorMessage} (힌트: ${insertError.hint})`
+        }
+        
+        setError(errorMessage)
+        setSaving(false)
+      } else if (newPost) {
+        console.log('Notice post created successfully:', newPost.id)
+        console.log('Post data:', newPost)
+        
+        // 성공 시 즉시 리다이렉트
+        window.location.href = `/claims/notice/${newPost.id}`
+      } else {
+        console.error('Notice post creation returned no data')
+        setError('게시글이 생성되지 않았습니다.')
+        setSaving(false)
       }
-      
-      setError(errorMessage)
-      setSaving(false)
-    } else if (newPost) {
-      console.log('Notice post created successfully:', newPost.id)
-      console.log('Post data:', newPost)
-      setTimeout(() => {
-        router.push(`/claims/notice/${newPost.id}`)
-        router.refresh()
-      }, 100)
-    } else {
-      console.error('Notice post creation returned no data')
-      setError('게시글이 생성되지 않았습니다.')
+    } catch (error: any) {
+      console.error('Unexpected error:', error)
+      setError(error?.message || '예상치 못한 오류가 발생했습니다.')
       setSaving(false)
     }
   }
