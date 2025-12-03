@@ -84,18 +84,22 @@ export default function JobsPage() {
 
         {/* 구인 탭 */}
         <TabsContent value="recruit" className="mt-0">
-          <Tabs value={defaultTab} onValueChange={(value) => setDefaultTab(value as 'doctor' | 'other')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="doctor">의사</TabsTrigger>
-              <TabsTrigger value="other">의료진</TabsTrigger>
-            </TabsList>
-            <TabsContent value="doctor" className="mt-6">
-              <DoctorJobsBoard />
-            </TabsContent>
-            <TabsContent value="other" className="mt-6">
-              <OtherJobsBoard />
-            </TabsContent>
-          </Tabs>
+          {userRoleChecked ? (
+            <Tabs value={defaultTab} onValueChange={(value) => setDefaultTab(value as 'doctor' | 'other')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="doctor">의사</TabsTrigger>
+                <TabsTrigger value="other">의료진</TabsTrigger>
+              </TabsList>
+              <TabsContent value="doctor" className="mt-6">
+                <DoctorJobsBoard />
+              </TabsContent>
+              <TabsContent value="other" className="mt-6">
+                <OtherJobsBoard />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+          )}
         </TabsContent>
 
         {/* 구직 탭 */}
