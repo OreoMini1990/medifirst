@@ -32,38 +32,6 @@ export function RoleCommunity() {
   const supabase = createClient()
   const router = useRouter()
 
-  useEffect(() => {
-    fetchUserRole()
-  }, [])
-
-  useEffect(() => {
-    if (userRole) {
-      fetchPosts()
-    }
-  }, [userRole, currentPage, searchQuery, fetchPosts])
-
-  async function fetchUserRole() {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      router.push('/login')
-      return
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.role) {
-      router.push('/onboarding')
-      return
-    }
-
-    setUserRole(profile.role as UserRole)
-  }
-
   const fetchPosts = useCallback(async () => {
     if (!userRole) return
     
@@ -134,6 +102,28 @@ export function RoleCommunity() {
       setLoading(false)
     }
   }, [userRole, currentPage, postsPerPage, searchQuery, supabase])
+
+  async function fetchUserRole() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.role) {
+      router.push('/onboarding')
+      return
+    }
+
+    setUserRole(profile.role as UserRole)
+  }
 
   useEffect(() => {
     fetchUserRole()
