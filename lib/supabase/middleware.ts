@@ -47,6 +47,28 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // 로그인한 사용자의 온보딩 상태 확인
+  if (user) {
+    // 온보딩 페이지는 통과
+    if (request.nextUrl.pathname.startsWith('/onboarding')) {
+      return supabaseResponse
+    }
+
+    // 프로필 조회
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, workplace_name')
+      .eq('id', user.id)
+      .single()
+
+    // role 또는 workplace_name이 없으면 온보딩 페이지로 리다이렉트
+    if (profile && (!profile.role || !profile.workplace_name)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

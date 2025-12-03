@@ -5,6 +5,8 @@ export type UserRole =
   | 'pt' 
   | 'rt' 
   | 'admin_staff'
+  | 'manager'
+  | 'etc'
 
 export type BoardType = 
   | 'community' 
@@ -39,9 +41,12 @@ export interface Profile {
   email: string
   display_name: string | null
   role: UserRole | null
-  hospital_name: string | null
+  workplace_name: string | null  // 근무지 이름 (병원명, 의원명 등)
+  workplace_type: string | null  // 'clinic' | 'hospital' | 'etc' (선택사항)
   created_at: string
   updated_at: string
+  // 하위 호환성을 위해 hospital_name도 유지 (deprecated)
+  hospital_name?: string | null
 }
 
 export interface Post {
@@ -54,6 +59,7 @@ export interface Post {
   content: string
   is_question: boolean
   is_pinned: boolean
+  view_count?: number
   created_at: string
   updated_at: string
   deleted_at: string | null

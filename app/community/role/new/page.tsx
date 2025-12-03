@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -8,13 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import type { UserRole } from '@/types/database'
 
 const roleLabels: Record<UserRole, string> = {
@@ -29,73 +22,108 @@ const roleLabels: Record<UserRole, string> = {
 export default function NewRolePostPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [category, setCategory] = useState<UserRole | ''>('')
-  const [loading, setLoading] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!category) {
-      setError('직역을 선택해주세요.')
+  useEffect(() => {
+    fetchUserRole()
+  }, [])
+
+  async function fetchUserRole() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      router.push('/login')
       return
     }
 
-    setLoading(true)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.role) {
+      router.push('/onboarding')
+      return
+    }
+
+    setUserRole(profile.role as UserRole)
+    setLoading(false)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!userRole) {
+      setError('직역 정보가 없습니다.')
+      return
+    }
+
+    setSaving(true)
     setError(null)
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setError('로그인이 필요합니다.')
-      setLoading(false)
+      setSaving(false)
       return
     }
 
-    const { error: insertError } = await supabase
+    const { data: newPost, error: insertError } = await supabase
       .from('posts')
       .insert({
         author_id: user.id,
         board: 'community',
         sub_board: 'role',
-        category,
+        category: userRole, // 자동으로 사용자 직역 설정
         title,
         content,
         is_question: false,
         is_pinned: false,
       })
+      .select()
+      .single()
 
     if (insertError) {
-      setError(insertError.message)
-      setLoading(false)
+      console.error('Insert error:', insertError)
+      setError(insertError.message || '게시글 작성에 실패했습니다.')
+      setSaving(false)
+    } else if (newPost) {
+      // 작성한 게시글 상세 페이지로 리다이렉트
+      router.push(`/community/role/${newPost.id}`)
+      router.refresh()
     } else {
-      router.push('/community')
+      setError('게시글이 생성되지 않았습니다.')
+      setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8 text-muted-foreground">로딩 중...</div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="max-w-3xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>직역별 커뮤니티 글쓰기</CardTitle>
+          <CardTitle>
+            {userRole ? `${roleLabels[userRole]} 게시판 글쓰기` : '직업별 커뮤니티 글쓰기'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">직역</Label>
-              <Select value={category} onValueChange={(value) => setCategory(value as UserRole)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="직역 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(roleLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="title">제목</Label>
               <Input
@@ -119,8 +147,8 @@ export default function NewRolePostPage() {
               <div className="text-sm text-destructive">{error}</div>
             )}
             <div className="flex gap-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? '작성 중...' : '작성하기'}
+              <Button type="submit" disabled={saving}>
+                {saving ? '작성 중...' : '작성하기'}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.back()}>
                 취소

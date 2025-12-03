@@ -15,10 +15,16 @@ import { useEffect, useState } from 'react'
 import type { Profile } from '@/types/database'
 import { MobileNav } from './MobileNav'
 
-const navItems = [
+type NavItem = {
+  href: string
+  label: string
+  external?: boolean
+}
+
+const navItems: NavItem[] = [
   { href: '/community', label: '커뮤니티' },
   { href: '/startup', label: '개원·경영' },
-  { href: '/academy', label: '아카데미' },
+  { href: 'https://ghmedi.liveklass.com', label: '아카데미', external: true },
   { href: '/claims', label: '심사청구' },
   { href: '/jobs', label: '구인·구직' },
 ]
@@ -63,19 +69,34 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
-                pathname === item.href
-                  ? 'text-foreground'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {navItems.map((item) => {
+            if (item.external) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground"
+                >
+                  {item.label}
+                </a>
+              )
+            }
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  pathname === item.href
+                    ? 'text-foreground'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
         <div className="md:hidden">
           <MobileNav />

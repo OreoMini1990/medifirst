@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PostListItem } from './PostListItem'
+import { Pagination } from '@/components/common/Pagination'
 import type { Post, UserRole } from '@/types/database'
-import { Plus } from 'lucide-react'
+import { PenLine, Search } from 'lucide-react'
 
 const roleLabels: Record<UserRole, string> = {
   doctor: '의사',
@@ -20,108 +20,234 @@ const roleLabels: Record<UserRole, string> = {
 }
 
 export function RoleCommunity() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all')
+  const [posts, setPosts] = useState<(Post & { commentCount?: number })[]>([])
+  const [userRole, setUserRole] = useState<UserRole | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchQuery, setSearchQuery] = useState('')
+  const postsPerPage = 20
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
-    fetchPosts()
-  }, [selectedRole])
+    fetchUserRole()
+  }, [])
 
-  async function fetchPosts() {
+  async function fetchUserRole() {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      router.push('/login')
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.role) {
+      router.push('/onboarding')
+      return
+    }
+
+    setUserRole(profile.role as UserRole)
+  }
+
+  const fetchPosts = useCallback(async () => {
+    if (!userRole) return
+    
     setLoading(true)
-    let query = supabase
-      .from('posts')
-      .select('*, profiles:author_id(display_name, role)')
-      .eq('board', 'community')
-      .eq('sub_board', 'role')
-      .is('deleted_at', null)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(50)
+    
+    try {
+      // 전체 개수 조회 (페이지네이션용) - 사용자 직역으로 필터링
+      let countQuery = supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('board', 'community')
+        .eq('sub_board', 'role')
+        .eq('category', userRole) // 사용자 직역으로 자동 필터링
+        .is('deleted_at', null)
 
-    if (selectedRole !== 'all') {
-      query = query.eq('category', selectedRole)
+      // 검색어가 있으면 제목으로 필터링
+      if (searchQuery.trim()) {
+        countQuery = countQuery.ilike('title', `%${searchQuery.trim()}%`)
+      }
+
+      const { count } = await countQuery
+
+      const total = count || 0
+      setTotalPages(Math.ceil(total / postsPerPage))
+
+      // 게시글 조회 - 사용자 직역으로 필터링
+      const offset = (currentPage - 1) * postsPerPage
+      let query = supabase
+        .from('posts')
+        .select('*, profiles!author_id(display_name, role)')
+        .eq('board', 'community')
+        .eq('sub_board', 'role')
+        .eq('category', userRole) // 사용자 직역으로 자동 필터링
+        .is('deleted_at', null)
+
+      // 검색어가 있으면 제목으로 필터링
+      if (searchQuery.trim()) {
+        query = query.ilike('title', `%${searchQuery.trim()}%`)
+      }
+
+      const { data, error } = await query
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(offset, offset + postsPerPage - 1)
+
+      if (error) {
+        console.error('Error fetching posts:', error)
+        setPosts([])
+      } else {
+        // 각 게시글의 댓글 수 조회
+        const postsWithComments = await Promise.all(
+          (data || []).map(async (post) => {
+            const { count } = await supabase
+              .from('comments')
+              .select('*', { count: 'exact', head: true })
+              .eq('post_id', post.id)
+              .is('deleted_at', null)
+            
+            return { ...post, commentCount: count || 0 }
+          })
+        )
+        setPosts(postsWithComments as Post[])
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      setPosts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [userRole, currentPage, postsPerPage, searchQuery, supabase])
+
+  useEffect(() => {
+    fetchUserRole()
+  }, [])
+
+  useEffect(() => {
+    if (userRole) {
+      fetchPosts()
+    }
+  }, [userRole, currentPage, searchQuery, fetchPosts])
+
+  // 페이지 포커스 시 게시글 새로고침
+  useEffect(() => {
+    if (!userRole) return
+
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchPosts()
+      }
     }
 
-    const { data, error } = await query
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleFocus)
 
-    if (error) {
-      console.error('Error fetching posts:', error)
-    } else {
-      setPosts(data || [])
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleFocus)
     }
-    setLoading(false)
+  }, [userRole, fetchPosts])
+
+  if (!userRole) {
+    return null
   }
 
   return (
     <div className="space-y-4">
+      {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <Tabs value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole | 'all')}>
-          <TabsList>
-            <TabsTrigger value="all">전체</TabsTrigger>
-            {Object.entries(roleLabels).map(([value, label]) => (
-              <TabsTrigger key={value} value={value}>
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <Button asChild>
+        <h2 className="text-xl font-semibold">
+          {roleLabels[userRole]} 게시판
+        </h2>
+        <Button asChild className="ml-auto rounded-full bg-black text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black/90">
           <Link href="/community/role/new">
-            <Plus className="mr-2 h-4 w-4" />
+            <PenLine className="h-4 w-4" />
             글쓰기
           </Link>
         </Button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-8 text-muted-foreground">로딩 중...</div>
-      ) : posts.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
+      {/* 게시글 리스트 */}
+      {!loading && posts.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
           게시글이 없습니다.
         </div>
       ) : (
-        <div className="space-y-4">
+        <ul className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
           {posts.map((post) => (
-            <Card key={post.id} className="hover:bg-accent/50 transition-colors">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {post.is_pinned && (
-                        <Badge variant="secondary">고정</Badge>
-                      )}
-                      {post.category && (
-                        <Badge variant="outline">
-                          {roleLabels[post.category as UserRole] || post.category}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg">
-                      <Link
-                        href={`/community/role/${post.id}`}
-                        className="hover:underline"
-                      >
-                        {post.title}
-                      </Link>
-                    </CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>
-                    {post.profiles?.display_name || '익명'} ·{' '}
-                    {new Date(post.created_at).toLocaleDateString('ko-KR')}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
+            <PostListItem
+              key={post.id}
+              href={`/community/role/${post.id}`}
+              title={post.title}
+              categoryLabel={undefined}
+              authorName={post.profiles?.display_name || '익명'}
+              avatarUrl={post.profiles?.avatar_url || null}
+              commentCount={post.commentCount || 0}
+              likeCount={0}
+              viewCount={post.view_count || 0}
+              createdAt={post.created_at}
+            />
           ))}
-        </div>
+        </ul>
       )}
+
+      {/* 페이지네이션 */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+      />
+
+      {/* 검색 바 */}
+      <div className="mt-4 flex w-full max-w-xl mx-auto items-center gap-2">
+        <select className="h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm">
+          <option value="title">제목</option>
+          <option value="content">내용</option>
+          <option value="author">작성자</option>
+        </select>
+        <input
+          className="flex-1 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder="검색할 단어 입력"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              setCurrentPage(1)
+            }
+          }}
+        />
+        <Button
+          className="h-10 px-4 rounded-full bg-slate-900 dark:bg-slate-800 text-white text-sm flex items-center gap-1 hover:bg-slate-800 dark:hover:bg-slate-700"
+          onClick={() => {
+            setCurrentPage(1)
+            // searchQuery가 변경되면 useEffect에서 자동으로 fetchPosts가 호출됨
+          }}
+        >
+          <Search className="h-4 w-4" />
+          검색
+        </Button>
+        {searchQuery && (
+          <Button
+            variant="outline"
+            className="h-10 px-4 rounded-full text-sm"
+            onClick={() => {
+              setSearchQuery('')
+              setCurrentPage(1)
+            }}
+          >
+            초기화
+          </Button>
+        )}
+      </div>
     </div>
   )
 }
