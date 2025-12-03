@@ -359,22 +359,35 @@ export default function QAPostDetailPage() {
         </article>
 
         {/* 추천 버튼 */}
-        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-          <button
-            onClick={handleLike}
-            disabled={liking}
-            className={`flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
-              liked 
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            } ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-          >
-            <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
-            <span>{liked ? '추천 취소' : '이 글 추천하기'}</span>
-            {likeCount > 0 && (
-              <span className="ml-1 text-sm opacity-90">({likeCount})</span>
+        <div className="mt-10 pt-8 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col items-center gap-3">
+            <button
+              onClick={handleLike}
+              disabled={liking}
+              className={`group relative flex flex-col items-center justify-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                liked 
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40' 
+                  : 'bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-700 text-slate-700 dark:text-slate-200 hover:from-slate-200 hover:to-slate-100 dark:hover:from-slate-700 dark:hover:to-slate-600 shadow-md hover:shadow-lg'
+              } ${liking ? 'opacity-50 cursor-not-allowed scale-100' : 'cursor-pointer'} min-w-[200px]`}
+            >
+              <div className="flex items-center gap-2">
+                <ThumbsUp className={`h-6 w-6 transition-transform duration-200 ${liked ? 'fill-current' : ''} group-hover:scale-110`} />
+                <span className="text-base">{liked ? '추천 취소' : '이 글 추천하기'}</span>
+              </div>
+              {likeCount > 0 && (
+                <div className={`text-sm font-normal mt-1 ${
+                  liked ? 'text-emerald-50' : 'text-slate-500 dark:text-slate-400'
+                }`}>
+                  {likeCount}명이 추천했습니다
+                </div>
+              )}
+            </button>
+            {likeCount === 0 && !liked && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
+                이 글이 도움이 되었다면 추천해주세요
+              </p>
             )}
-          </button>
+          </div>
         </div>
       </section>
 
