@@ -377,7 +377,7 @@ export default function QAPostDetailPage() {
               }`}>
                 <ThumbsUp className={`h-6 w-6 ${liked ? 'fill-current' : ''}`} />
               </div>
-              <span className="text-xs font-medium">침하하</span>
+              <span className="text-xs font-medium">추천</span>
               {likeCount > 0 && (
                 <span className="text-xs text-slate-400 dark:text-slate-500">{likeCount}</span>
               )}

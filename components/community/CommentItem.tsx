@@ -270,7 +270,7 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
                   }`}>
                     <ThumbsUp className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} />
                   </div>
-                  <span className="text-xs font-medium">침하하</span>
+                  <span className="text-xs font-medium">추천</span>
                   {likeCount > 0 && (
                     <span className="text-xs text-slate-400 dark:text-slate-500">{likeCount}</span>
                   )}
