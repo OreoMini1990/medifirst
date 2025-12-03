@@ -45,8 +45,11 @@ export default function LoginPage() {
       setError(errorMessage)
       setLoading(false)
     } else if (data.user) {
-      router.push('/')
-      router.refresh()
+      // 세션이 완전히 설정될 때까지 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // 강제로 페이지 새로고침하여 Header 상태 업데이트
+      window.location.href = '/'
     }
   }
 

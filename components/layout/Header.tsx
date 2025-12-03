@@ -49,11 +49,35 @@ export function Header() {
         if (profile) {
           setUser(profile)
         }
+      } else {
+        setUser(null)
       }
       setLoading(false)
     }
     
     getUser()
+
+    // 세션 변경 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (profile) {
+          setUser(profile)
+        }
+      } else {
+        setUser(null)
+      }
+      setLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase])
 
   const handleSignOut = async () => {
