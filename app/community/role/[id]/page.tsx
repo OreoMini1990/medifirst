@@ -123,6 +123,9 @@ export default function PostDetailPage() {
         setLoading(false)
       } else if (data) {
         console.log('Post fetched:', data.title, 'Content length:', data.content?.length || 0)
+        console.log('Post author_id:', data.author_id)
+        console.log('Post profiles:', data.profiles)
+        console.log('Post profiles display_name:', data.profiles?.display_name)
         setPost(data)
         fetchComments()
         fetchRelatedPosts(data) // post 상태 대신 data를 직접 전달
