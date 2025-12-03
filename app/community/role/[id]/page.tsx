@@ -130,9 +130,11 @@ export default function PostDetailPage() {
         console.log('Post profiles:', data.profiles)
         console.log('Post profiles display_name:', data.profiles?.display_name)
         setPost(data)
+        setLikeCount(data.like_count || 0)
         fetchComments()
         fetchRelatedPosts(data) // post 상태 대신 data를 직접 전달
         fetchPrevNextPosts(data) // post 상태 대신 data를 직접 전달
+        fetchLikeStatus() // 좋아요 상태 확인
         setLoading(false)
       } else {
         setPost(null)
