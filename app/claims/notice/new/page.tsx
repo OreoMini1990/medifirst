@@ -21,28 +21,56 @@ export default function NewNoticePage() {
 
   useEffect(() => {
     async function checkStaffPermission() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setError('로그인이 필요합니다.')
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError) {
+          console.error('Auth error:', authError)
+          setError('인증 오류가 발생했습니다.')
+          setLoading(false)
+          return
+        }
+        
+        if (!user) {
+          setError('로그인이 필요합니다.')
+          setLoading(false)
+          router.push('/login')
+          return
+        }
+
+        console.log('Checking staff permission for user:', user.id)
+        
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError)
+          setError('프로필 정보를 불러올 수 없습니다.')
+          setLoading(false)
+          return
+        }
+
+        console.log('User profile:', profile)
+        console.log('User role:', profile?.role)
+        
+        const staff = profile?.role === 'manager' || profile?.role === 'admin_staff'
+        console.log('Is staff:', staff)
+        
+        setIsStaff(staff)
+        
+        if (!staff) {
+          setError(`스탭만 최신고시를 작성할 수 있습니다. (현재 역할: ${profile?.role || '없음'})`)
+        }
+        
         setLoading(false)
-        router.push('/login')
-        return
+      } catch (error) {
+        console.error('Unexpected error checking staff permission:', error)
+        setError('권한 확인 중 오류가 발생했습니다.')
+        setLoading(false)
       }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      const staff = profile?.role === 'manager' || profile?.role === 'admin_staff'
-      setIsStaff(staff)
-      
-      if (!staff) {
-        setError('스탭만 최신고시를 작성할 수 있습니다.')
-      }
-      
-      setLoading(false)
     }
     checkStaffPermission()
   }, [supabase, router])
@@ -82,11 +110,26 @@ export default function NewNoticePage() {
 
     if (insertError) {
       console.error('Insert error:', insertError)
+      console.error('Insert error code:', insertError.code)
+      console.error('Insert error message:', insertError.message)
       console.error('Insert error details:', JSON.stringify(insertError, null, 2))
-      setError(insertError.message || '게시글 작성에 실패했습니다.')
+      console.error('Insert error hint:', insertError.hint)
+      
+      // 더 자세한 에러 메시지
+      let errorMessage = insertError.message || '게시글 작성에 실패했습니다.'
+      if (insertError.code === '23514') {
+        errorMessage = '데이터베이스 제약 조건 오류: sub_board 값이 유효하지 않습니다. (notice가 허용되지 않을 수 있습니다)'
+      } else if (insertError.code === '23503') {
+        errorMessage = '외래 키 제약 조건 오류: 작성자 정보가 유효하지 않습니다.'
+      } else if (insertError.hint) {
+        errorMessage = `${errorMessage} (힌트: ${insertError.hint})`
+      }
+      
+      setError(errorMessage)
       setSaving(false)
     } else if (newPost) {
       console.log('Notice post created successfully:', newPost.id)
+      console.log('Post data:', newPost)
       setTimeout(() => {
         router.push(`/claims/notice/${newPost.id}`)
         router.refresh()
