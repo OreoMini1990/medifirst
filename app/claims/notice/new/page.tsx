@@ -115,8 +115,8 @@ export default function NewNoticePage() {
         content_length: content.trim().length
       })
 
-      // 타임아웃 설정 (10초)
-      const insertPromise = supabase
+      // 게시글 작성
+      const { data: newPost, error: insertError } = await supabase
         .from('posts')
         .insert({
           author_id: user.id,
@@ -130,15 +130,6 @@ export default function NewNoticePage() {
         })
         .select()
         .single()
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('요청 시간이 초과되었습니다.')), 10000)
-      )
-
-      const { data: newPost, error: insertError } = await Promise.race([
-        insertPromise,
-        timeoutPromise
-      ]) as { data: any, error: any }
 
       if (insertError) {
         console.error('Insert error:', insertError)
