@@ -57,25 +57,61 @@ export function Header() {
               .eq('id', authUser.id)
               .single()
             
-            if (profileError) {
-              console.error('Header: Profile error:', profileError)
-              console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
-              // 프로필이 없어도 기본 정보로 사용자 표시
-              setUser({
-                id: authUser.id,
-                email: authUser.email || '',
-                display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
-                role: null,
-                workplace_name: null,
-                created_at: authUser.created_at,
-                updated_at: authUser.updated_at || authUser.created_at,
-              } as Profile)
-            } else if (profile) {
-              console.log('Header: Profile loaded:', profile.display_name, profile.email)
-              setUser(profile)
+          if (profileError) {
+            console.error('Header: Profile error:', profileError)
+            console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
+            
+            // 프로필이 없는 경우 (PGRST116 에러) 프로필 생성 시도
+            if (profileError.code === 'PGRST116' || profileError.message?.includes('0 rows')) {
+              console.log('Header: Profile not found, creating profile...')
+              const { error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: authUser.id,
+                  email: authUser.email || '',
+                  display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+                  role: null,
+                  workplace_name: null,
+                })
+              
+              if (createError) {
+                console.error('Header: Failed to create profile:', createError)
+                // 프로필 생성 실패해도 기본 정보로 사용자 표시
+                setUser({
+                  id: authUser.id,
+                  email: authUser.email || '',
+                  display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+                  role: null,
+                  workplace_name: null,
+                  created_at: authUser.created_at,
+                  updated_at: authUser.updated_at || authUser.created_at,
+                } as Profile)
+              } else {
+                console.log('Header: Profile created successfully')
+                // 프로필 생성 후 다시 조회
+                const { data: newProfile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', authUser.id)
+                  .single()
+                
+                if (newProfile) {
+                  setUser(newProfile)
+                } else {
+                  // 기본 정보로 사용자 표시
+                  setUser({
+                    id: authUser.id,
+                    email: authUser.email || '',
+                    display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+                    role: null,
+                    workplace_name: null,
+                    created_at: authUser.created_at,
+                    updated_at: authUser.updated_at || authUser.created_at,
+                  } as Profile)
+                }
+              }
             } else {
-              console.log('Header: No profile found, using auth user data')
-              // 프로필이 없어도 기본 정보로 사용자 표시
+              // 다른 에러인 경우 기본 정보로 사용자 표시
               setUser({
                 id: authUser.id,
                 email: authUser.email || '',
@@ -86,6 +122,22 @@ export function Header() {
                 updated_at: authUser.updated_at || authUser.created_at,
               } as Profile)
             }
+          } else if (profile) {
+            console.log('Header: Profile loaded:', profile.display_name, profile.email)
+            setUser(profile)
+          } else {
+            console.log('Header: No profile found, using auth user data')
+            // 프로필이 없어도 기본 정보로 사용자 표시
+            setUser({
+              id: authUser.id,
+              email: authUser.email || '',
+              display_name: authUser.user_metadata?.display_name || authUser.user_metadata?.full_name || null,
+              role: null,
+              workplace_name: null,
+              created_at: authUser.created_at,
+              updated_at: authUser.updated_at || authUser.created_at,
+            } as Profile)
+          }
           } catch (err) {
             console.error('Header: Exception fetching profile:', err)
             // 예외 발생 시에도 기본 정보로 사용자 표시
@@ -138,16 +190,68 @@ export function Header() {
           if (profileError) {
             console.error('Header: Profile error on auth change:', profileError)
             console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
-            // 프로필이 없어도 기본 정보로 사용자 표시
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
-              role: null,
-              workplace_name: null,
-              created_at: session.user.created_at,
-              updated_at: session.user.updated_at || session.user.created_at,
-            } as Profile)
+            
+            // 프로필이 없는 경우 (PGRST116 에러) 프로필 생성 시도
+            if (profileError.code === 'PGRST116' || profileError.message?.includes('0 rows') || profileError.message?.includes('timeout')) {
+              console.log('Header: Profile not found on auth change, creating profile...')
+              const { error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+                  role: null,
+                  workplace_name: null,
+                })
+              
+              if (createError) {
+                console.error('Header: Failed to create profile on auth change:', createError)
+                // 프로필 생성 실패해도 기본 정보로 사용자 표시
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+                  role: null,
+                  workplace_name: null,
+                  created_at: session.user.created_at,
+                  updated_at: session.user.updated_at || session.user.created_at,
+                } as Profile)
+              } else {
+                console.log('Header: Profile created successfully on auth change')
+                // 프로필 생성 후 다시 조회
+                const { data: newProfile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single()
+                
+                if (newProfile) {
+                  setUser(newProfile)
+                } else {
+                  // 기본 정보로 사용자 표시
+                  setUser({
+                    id: session.user.id,
+                    email: session.user.email || '',
+                    display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+                    role: null,
+                    workplace_name: null,
+                    created_at: session.user.created_at,
+                    updated_at: session.user.updated_at || session.user.created_at,
+                  } as Profile)
+                }
+              }
+            } else {
+              // 다른 에러인 경우 기본 정보로 사용자 표시
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                display_name: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null,
+                role: null,
+                workplace_name: null,
+                created_at: session.user.created_at,
+                updated_at: session.user.updated_at || session.user.created_at,
+              } as Profile)
+            }
           } else if (profile) {
             console.log('Header: Profile loaded on auth change:', profile.display_name, profile.email)
             setUser(profile)
