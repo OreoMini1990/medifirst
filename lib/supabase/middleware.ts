@@ -55,14 +55,14 @@ export async function updateSession(request: NextRequest) {
     }
 
     // 프로필 조회
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role, workplace_name')
       .eq('id', user.id)
       .single()
 
-    // role 또는 workplace_name이 없으면 온보딩 페이지로 리다이렉트
-    if (profile && (!profile.role || !profile.workplace_name)) {
+    // 프로필이 없거나 role 또는 workplace_name이 없으면 온보딩 페이지로 리다이렉트
+    if (profileError || !profile || !profile.role || !profile.workplace_name) {
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)

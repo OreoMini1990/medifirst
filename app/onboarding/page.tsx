@@ -98,13 +98,20 @@ export default function OnboardingPage() {
       .eq('id', user.id)
 
     if (updateError) {
-      setError(updateError.message)
+      console.error('Onboarding: Update error:', updateError)
+      console.error('Onboarding: Update error details:', JSON.stringify(updateError, null, 2))
+      setError(updateError.message || '저장 중 오류가 발생했습니다.')
       setLoading(false)
       return
     }
 
-    router.push('/')
-    router.refresh()
+    console.log('Onboarding: Profile updated successfully')
+    
+    // 업데이트 후 잠시 대기하여 데이터베이스에 반영되도록 함
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // 강제로 페이지 새로고침하여 미들웨어가 업데이트된 프로필을 확인하도록 함
+    window.location.href = '/'
   }
 
   if (checking) {
