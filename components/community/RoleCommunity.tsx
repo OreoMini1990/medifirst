@@ -230,7 +230,7 @@ export function RoleCommunity() {
               title={post.title}
               categoryLabel={undefined}
               authorName={post.profiles?.display_name || '익명'}
-              avatarUrl={post.profiles?.avatar_url || null}
+              avatarUrl={null}
               commentCount={post.commentCount || 0}
               likeCount={0}
               viewCount={post.view_count || 0}
