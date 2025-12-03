@@ -207,6 +207,13 @@ export default function SignupPage() {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          display_name: displayName.trim() || null,
+          role: role as UserRole,
+          workplace_name: workplaceName.trim(),
+        },
+      },
     })
 
     if (authError) {
@@ -236,18 +243,19 @@ export default function SignupPage() {
       
       if (sessionError || !session) {
         console.error('세션 오류:', sessionError)
-        // 세션이 없어도 프로필 업데이트는 시도 (트리거가 프로필을 생성했을 수 있음)
+        // 세션이 없으면 이메일 확인이 필요할 수 있음
+        // 트리거가 프로필을 생성했을 수 있으므로 확인
       }
       
       // 프로필이 이미 존재하는지 확인 (트리거에 의해 생성되었을 수 있음)
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', authData.user.id)
         .single()
       
-      if (existingProfile) {
-        // 프로필이 이미 존재하면 업데이트
+      // 프로필이 존재하면 업데이트 시도
+      if (existingProfile && session) {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
@@ -264,8 +272,14 @@ export default function SignupPage() {
           setLoading(false)
           return
         }
-      } else {
-        // 프로필이 없으면 생성 (직업과 근무지 필수)
+        
+        router.push('/')
+        router.refresh()
+        return
+      }
+      
+      // 세션이 있으면 프로필 생성 시도
+      if (session) {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -280,9 +294,10 @@ export default function SignupPage() {
         if (profileError) {
           console.error('프로필 생성 오류:', profileError)
           console.error('프로필 생성 오류 상세:', JSON.stringify(profileError, null, 2))
-          // RLS 정책 오류인 경우 더 명확한 메시지 표시
+          
+          // RLS 정책 오류인 경우
           if (profileError.message.includes('row-level security') || profileError.message.includes('RLS')) {
-            setError('회원가입 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+            setError('회원가입 처리 중 오류가 발생했습니다. 이메일 확인 후 다시 시도해주세요.')
           } else if (profileError.message.includes('duplicate') || profileError.message.includes('unique')) {
             // 중복 오류인 경우 업데이트 시도
             const { error: updateError } = await supabase
@@ -297,6 +312,10 @@ export default function SignupPage() {
             
             if (updateError) {
               setError('이미 등록된 사용자입니다.')
+            } else {
+              router.push('/')
+              router.refresh()
+              return
             }
           } else {
             setError(profileError.message || '프로필 생성 중 오류가 발생했습니다.')
@@ -304,10 +323,14 @@ export default function SignupPage() {
           setLoading(false)
           return
         }
+        
+        router.push('/')
+        router.refresh()
+      } else {
+        // 세션이 없으면 이메일 확인이 필요함
+        setError('이메일 확인 링크를 발송했습니다. 이메일을 확인한 후 다시 로그인해주세요.')
+        setLoading(false)
       }
-
-      router.push('/')
-      router.refresh()
     }
   }
 
