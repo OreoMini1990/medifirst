@@ -5,6 +5,7 @@ import { DoctorJobsBoard } from '@/components/jobs/DoctorJobsBoard'
 import { OtherJobsBoard } from '@/components/jobs/OtherJobsBoard'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function JobsPage() {
   const searchParams = useSearchParams()
@@ -12,15 +13,58 @@ export default function JobsPage() {
   const typeParam = searchParams.get('type')
   const [defaultTab, setDefaultTab] = useState<'doctor' | 'other'>('doctor')
   const [jobType, setJobType] = useState<'recruit' | 'resume'>('recruit')
+  const [userRoleChecked, setUserRoleChecked] = useState(false)
+  const supabase = createClient()
+
+  // 사용자 직업 확인하여 기본 탭 설정
+  useEffect(() => {
+    async function checkUserRole() {
+      // URL 파라미터가 있으면 사용자가 직접 선택한 것이므로 그대로 사용
+      if (tabParam === 'doctor' || tabParam === 'other') {
+        setDefaultTab(tabParam)
+        setUserRoleChecked(true)
+        return
+      }
+
+      // URL 파라미터가 없으면 사용자 직업 확인
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          // 로그인하지 않은 경우 기본값(의료진) 사용
+          setDefaultTab('other')
+          setUserRoleChecked(true)
+          return
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profile?.role === 'doctor') {
+          setDefaultTab('doctor')
+        } else {
+          setDefaultTab('other')
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        // 에러 발생 시 기본값(의료진) 사용
+        setDefaultTab('other')
+      } finally {
+        setUserRoleChecked(true)
+      }
+    }
+
+    checkUserRole()
+  }, [tabParam, supabase])
 
   useEffect(() => {
-    if (tabParam === 'doctor' || tabParam === 'other') {
-      setDefaultTab(tabParam)
-    }
     if (typeParam === 'recruit' || typeParam === 'resume') {
       setJobType(typeParam)
     }
-  }, [tabParam, typeParam])
+  }, [typeParam])
 
   return (
     <div className="space-y-6">
