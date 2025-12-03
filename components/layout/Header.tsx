@@ -48,6 +48,7 @@ export function Header() {
         }
         
         if (authUser) {
+          console.log('Header: Fetching profile for user:', authUser.id)
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -56,13 +57,17 @@ export function Header() {
           
           if (profileError) {
             console.error('Header: Profile error:', profileError)
+            console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
             setUser(null)
           } else if (profile) {
+            console.log('Header: Profile loaded:', profile.display_name, profile.email)
             setUser(profile)
           } else {
+            console.log('Header: No profile found')
             setUser(null)
           }
         } else {
+          console.log('Header: No auth user')
           setUser(null)
         }
       } catch (error) {
@@ -81,6 +86,7 @@ export function Header() {
       
       if (session?.user) {
         try {
+          console.log('Header: Fetching profile on auth change for user:', session.user.id)
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -89,10 +95,13 @@ export function Header() {
           
           if (profileError) {
             console.error('Header: Profile error on auth change:', profileError)
+            console.error('Header: Profile error details:', JSON.stringify(profileError, null, 2))
             setUser(null)
           } else if (profile) {
+            console.log('Header: Profile loaded on auth change:', profile.display_name, profile.email)
             setUser(profile)
           } else {
+            console.log('Header: No profile found on auth change')
             setUser(null)
           }
         } catch (error) {
@@ -100,6 +109,7 @@ export function Header() {
           setUser(null)
         }
       } else {
+        console.log('Header: No session on auth change')
         setUser(null)
       }
       setLoading(false)

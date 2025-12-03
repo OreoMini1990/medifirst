@@ -33,8 +33,12 @@ export function RoleCommunity() {
   const router = useRouter()
 
   const fetchPosts = useCallback(async () => {
-    if (!userRole) return
+    if (!userRole) {
+      console.log('RoleCommunity: fetchPosts skipped - no userRole')
+      return
+    }
     
+    console.log('RoleCommunity: Fetching posts for role:', userRole, 'page:', currentPage, 'search:', searchQuery)
     setLoading(true)
     
     try {
@@ -104,25 +108,48 @@ export function RoleCommunity() {
   }, [userRole, currentPage, postsPerPage, searchQuery, supabase])
 
   async function fetchUserRole() {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
+    try {
+      console.log('RoleCommunity: Fetching user role...')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError) {
+        console.error('RoleCommunity: Auth error:', authError)
+        router.push('/login')
+        return
+      }
+      
+      if (!user) {
+        console.log('RoleCommunity: No user found')
+        router.push('/login')
+        return
+      }
+
+      console.log('RoleCommunity: Fetching profile for user:', user.id)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        console.error('RoleCommunity: Profile error:', profileError)
+        console.error('RoleCommunity: Profile error details:', JSON.stringify(profileError, null, 2))
+        router.push('/onboarding')
+        return
+      }
+
+      if (!profile?.role) {
+        console.log('RoleCommunity: No role found in profile')
+        router.push('/onboarding')
+        return
+      }
+
+      console.log('RoleCommunity: User role found:', profile.role)
+      setUserRole(profile.role as UserRole)
+    } catch (error) {
+      console.error('RoleCommunity: Unexpected error in fetchUserRole:', error)
       router.push('/login')
-      return
     }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.role) {
-      router.push('/onboarding')
-      return
-    }
-
-    setUserRole(profile.role as UserRole)
   }
 
   useEffect(() => {
