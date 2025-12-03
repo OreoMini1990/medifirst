@@ -88,7 +88,9 @@ export default function OnboardingPage() {
       return
     }
 
-    const { error: updateError } = await supabase
+    console.log('Onboarding: Updating profile with role:', role, 'workplace:', workplaceName.trim())
+    
+    const { data: updateData, error: updateError } = await supabase
       .from('profiles')
       .update({
         role: role as UserRole,
@@ -96,6 +98,7 @@ export default function OnboardingPage() {
         hospital_name: workplaceName.trim(), // 하위 호환성
       })
       .eq('id', user.id)
+      .select()
 
     if (updateError) {
       console.error('Onboarding: Update error:', updateError)
@@ -105,10 +108,23 @@ export default function OnboardingPage() {
       return
     }
 
-    console.log('Onboarding: Profile updated successfully')
+    console.log('Onboarding: Profile updated successfully:', updateData)
+    
+    // 업데이트된 프로필 확인
+    const { data: verifyProfile, error: verifyError } = await supabase
+      .from('profiles')
+      .select('role, workplace_name')
+      .eq('id', user.id)
+      .single()
+    
+    if (verifyError) {
+      console.error('Onboarding: Verify error:', verifyError)
+    } else {
+      console.log('Onboarding: Verified profile:', verifyProfile)
+    }
     
     // 업데이트 후 잠시 대기하여 데이터베이스에 반영되도록 함
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise(resolve => setTimeout(resolve, 1500))
     
     // 강제로 페이지 새로고침하여 미들웨어가 업데이트된 프로필을 확인하도록 함
     window.location.href = '/'
