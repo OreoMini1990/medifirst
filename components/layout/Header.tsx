@@ -121,21 +121,19 @@ export function Header() {
         try {
           console.log('Header: Fetching profile on auth change for user:', session.user.id)
           
-          // 타임아웃 설정 (5초)
-          const profilePromise = supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
+          // 프로필 조회
+          const profileResult = await Promise.race([
+            supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single(),
+            new Promise<{ data: null, error: { message: string } }>((resolve) => 
+              setTimeout(() => resolve({ data: null, error: { message: 'Profile fetch timeout' } }), 5000)
+            )
+          ])
           
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-          )
-          
-          const { data: profile, error: profileError } = await Promise.race([
-            profilePromise,
-            timeoutPromise
-          ]) as { data: any, error: any }
+          const { data: profile, error: profileError } = profileResult
           
           if (profileError) {
             console.error('Header: Profile error on auth change:', profileError)
