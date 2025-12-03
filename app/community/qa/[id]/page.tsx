@@ -36,6 +36,9 @@ export default function QAPostDetailPage() {
   const [relatedPosts, setRelatedPosts] = useState<(Post & { commentCount?: number })[]>([])
   const [prevPost, setPrevPost] = useState<Post | null>(null)
   const [nextPost, setNextPost] = useState<Post | null>(null)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [liking, setLiking] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -63,6 +66,49 @@ export default function QAPostDetailPage() {
     }
   }, [post?.id, params.id, loading])
 
+  async function fetchLikeStatus() {
+    if (!currentUserId || !params.id) return
+    
+    try {
+      const response = await fetch(`/api/posts/${params.id}/like`)
+      const data = await response.json()
+      setLiked(data.liked || false)
+      setLikeCount(data.likeCount || 0)
+    } catch (error) {
+      console.error('Error fetching like status:', error)
+    }
+  }
+
+  async function handleLike() {
+    if (!currentUserId) {
+      router.push('/login')
+      return
+    }
+
+    if (liking) return
+
+    setLiking(true)
+    try {
+      const response = await fetch(`/api/posts/${params.id}/like`, {
+        method: 'POST',
+      })
+      const data = await response.json()
+
+      if (data.success) {
+        setLiked(data.liked)
+        setLikeCount(data.likeCount || 0)
+        // 게시글 상태도 업데이트
+        if (post) {
+          setPost({ ...post, like_count: data.likeCount || 0 })
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      setLiking(false)
+    }
+  }
+
   async function fetchPost() {
     try {
       setLoading(true)
@@ -82,9 +128,11 @@ export default function QAPostDetailPage() {
         console.log('Post profiles:', data.profiles)
         console.log('Post profiles display_name:', data.profiles?.display_name)
         setPost(data)
+        setLikeCount(data.like_count || 0)
         fetchComments()
         fetchRelatedPosts(data) // post 상태 대신 data를 직접 전달
         fetchPrevNextPosts(data) // post 상태 대신 data를 직접 전달
+        fetchLikeStatus() // 좋아요 상태 확인
         setLoading(false)
       } else {
         setPost(null)
@@ -251,10 +299,14 @@ export default function QAPostDetailPage() {
           <span className="font-medium text-slate-800 dark:text-slate-100">
             {post.profiles?.display_name || '익명'}
           </span>
-          <span className="flex items-center gap-1">
-            <ThumbsUp className="h-3 w-3" />
-            {0}
-          </span>
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            className={`flex items-center gap-1 hover:opacity-80 transition-opacity ${liked ? 'text-emerald-500' : ''} ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <ThumbsUp className={`h-3 w-3 ${liked ? 'fill-current' : ''}`} />
+            {likeCount}
+          </button>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3" />
             조회 {post.view_count || 0}

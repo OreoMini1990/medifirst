@@ -60,6 +60,7 @@ export interface Post {
   is_question: boolean
   is_pinned: boolean
   view_count?: number
+  like_count?: number
   created_at: string
   updated_at: string
   deleted_at: string | null

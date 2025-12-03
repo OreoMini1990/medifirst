@@ -150,7 +150,7 @@ export function FreeBoard() {
               authorName={post.profiles?.display_name || '익명'}
               avatarUrl={post.profiles?.avatar_url || null}
               commentCount={post.commentCount || 0}
-              likeCount={0}
+              likeCount={post.like_count || 0}
               viewCount={post.view_count || 0}
               createdAt={post.created_at}
             />

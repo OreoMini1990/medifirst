@@ -38,6 +38,9 @@ export default function FreePostDetailPage() {
   const [relatedPosts, setRelatedPosts] = useState<(Post & { commentCount?: number })[]>([])
   const [prevPost, setPrevPost] = useState<Post | null>(null)
   const [nextPost, setNextPost] = useState<Post | null>(null)
+  const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [liking, setLiking] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -250,10 +253,14 @@ export default function FreePostDetailPage() {
           <span className="font-medium text-slate-800 dark:text-slate-100">
             {post.profiles?.display_name || '익명'}
           </span>
-          <span className="flex items-center gap-1">
-            <ThumbsUp className="h-3 w-3" />
-            {0}
-          </span>
+          <button
+            onClick={handleLike}
+            disabled={liking}
+            className={`flex items-center gap-1 hover:opacity-80 transition-opacity ${liked ? 'text-emerald-500' : ''} ${liking ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <ThumbsUp className={`h-3 w-3 ${liked ? 'fill-current' : ''}`} />
+            {likeCount}
+          </button>
           <span className="flex items-center gap-1">
             <Eye className="h-3 w-3" />
             조회 {post.view_count || 0}

@@ -232,7 +232,7 @@ export function RoleCommunity() {
               authorName={post.profiles?.display_name || '익명'}
               avatarUrl={null}
               commentCount={post.commentCount || 0}
-              likeCount={0}
+              likeCount={post.like_count || 0}
               viewCount={post.view_count || 0}
               createdAt={post.created_at}
             />
