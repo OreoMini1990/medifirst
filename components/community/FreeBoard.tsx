@@ -25,16 +25,15 @@ export function FreeBoard() {
   const [totalPages, setTotalPages] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
   const postsPerPage = 20
-  const supabase = createClient()
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     
     try {
-      const client = createClient()
+      const supabase = createClient()
       
       // 전체 개수 조회
-      let countQuery = client
+      let countQuery = supabase
         .from('posts')
         .select('*', { count: 'exact', head: true })
         .eq('board', 'community')
@@ -52,7 +51,7 @@ export function FreeBoard() {
 
       // 게시글 조회
       const offset = (currentPage - 1) * postsPerPage
-      let query = client
+      let query = supabase
         .from('posts')
         .select('*, profiles!author_id(display_name, role)')
         .eq('board', 'community')
@@ -76,7 +75,7 @@ export function FreeBoard() {
         // 각 게시글의 댓글 수 조회
         const postsWithComments = await Promise.all(
           (data || []).map(async (post) => {
-            const { count } = await client
+            const { count } = await supabase
               .from('comments')
               .select('*', { count: 'exact', head: true })
               .eq('post_id', post.id)
