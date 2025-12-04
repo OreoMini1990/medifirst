@@ -137,3 +137,5 @@ Vercel에서 구글 로그인이 작동하지 않는 경우, 다음 설정을 �
 - `NEXT_PUBLIC_SITE_URL` 환경 변수가 설정되지 않으면 `window.location.origin`을 사용합니다.
 - Vercel Preview 배포의 경우 동적 URL이 생성되므로, Supabase에서 와일드카드(`**`)를 사용하는 것이 좋습니다.
 
+
+

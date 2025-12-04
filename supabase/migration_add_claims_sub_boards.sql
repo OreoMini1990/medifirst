@@ -8,3 +8,5 @@ ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_sub_board_check;
 ALTER TABLE posts ADD CONSTRAINT posts_sub_board_check 
   CHECK (sub_board IN ('role', 'free', 'qa', 'notice'));
 
+
+

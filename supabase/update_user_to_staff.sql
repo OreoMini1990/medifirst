@@ -58,3 +58,5 @@ FROM public.profiles
 WHERE role IN ('manager', 'admin_staff')
 ORDER BY updated_at DESC;
 
+
+

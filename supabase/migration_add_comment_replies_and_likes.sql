@@ -54,3 +54,5 @@ CREATE POLICY "Users can insert own comment_likes" ON comment_likes
 CREATE POLICY "Users can delete own comment_likes" ON comment_likes
   FOR DELETE USING (auth.uid() = user_id);
 
+
+

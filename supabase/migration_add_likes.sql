@@ -51,3 +51,5 @@ CREATE TRIGGER trigger_update_post_like_count
   AFTER INSERT OR DELETE ON post_likes
   FOR EACH ROW EXECUTE FUNCTION update_post_like_count();
 
+
+

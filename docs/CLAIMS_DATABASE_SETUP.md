@@ -53,3 +53,5 @@ CREATE POLICY "Anyone can view claims posts" ON posts
   FOR SELECT USING (board = 'claims');
 ```
 
+
+

@@ -1,0 +1,50 @@
+warning: in the working copy of 'app/api/posts/[id]/view/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/auth/callback/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/claims/notice/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/claims/notice/new/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/claims/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/claims/qa/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/claims/qa/new/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/community/free/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/community/qa/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/community/role/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/community/role/edit/[id]/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/community/role/new/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/jobs/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/login/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/onboarding/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/signup/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/startup/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/claims/NoticeBoard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/claims/QABoard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/community/CommentForm.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/community/CommentItem.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/community/CommentList.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/jobs/DoctorJobsBoard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/jobs/OtherJobsBoard.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/layout/Header.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/supabase/client.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/supabase/middleware.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'supabase/create_staff_account.sql', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'supabase/schema.sql', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'types/database.ts', LF will be replaced by CRLF the next time Git touches it
+app/api/comments/[id]/like/route.ts
+app/api/posts/[id]/like/route.ts
+app/claims/notice/edit/[id]/page.tsx
+app/claims/qa/edit/[id]/page.tsx
+app/layout.tsx
+components/layout/Header.tsx
+docs/CLAIMS_DATABASE_SETUP.md
+docs/MIGRATION_GUIDE.md
+docs/PROJECT_COMPLETION_REPORT.md
+docs/STAFF_ACCOUNT_GUIDE.md
+docs/SYSTEM_DESIGN_DIAGRAM.md
+docs/VERCEL_GOOGLE_OAUTH_SETUP.md
+package.json
+supabase/migration_add_claims_sub_boards.sql
+supabase/migration_add_comment_replies_and_likes.sql
+supabase/migration_add_likes.sql
+supabase/migration_add_profile_trigger.sql
+supabase/migration_all_features.sql
+supabase/update_user_to_staff.sql

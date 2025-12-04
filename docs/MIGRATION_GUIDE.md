@@ -71,3 +71,5 @@ WHERE table_name = 'comments'
 AND column_name IN ('parent_id', 'like_count');
 ```
 
+
+

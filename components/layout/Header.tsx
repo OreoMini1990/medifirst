@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -332,47 +332,48 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold">MediFirst</span>
-        </Link>
+    <header className="sticky top-0 z-50 w-full bg-white">
+      <div className="mx-auto max-w-5xl px-6">
+        <div className="flex h-16 items-center justify-between">
+          <Link href="/" className="flex items-center space-x-2">
+            <span className="text-xl font-bold text-slate-900">MediFirst</span>
+          </Link>
 
-        <nav className="hidden md:flex items-center space-x-6">
-          {navItems.map((item) => {
-            if (item.external) {
+          <nav className="hidden md:flex items-center gap-6">
+            {navItems.map((item) => {
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[15px] font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                )
+              }
               return (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium transition-colors hover:text-primary text-muted-foreground"
+                  className={`text-[15px] font-medium transition-colors ${
+                    pathname === item.href
+                      ? 'text-emerald-500 font-semibold'
+                      : 'text-slate-700 hover:text-slate-900'
+                  }`}
                 >
                   {item.label}
-                </a>
+                </Link>
               )
-            }
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname === item.href
-                    ? 'text-foreground'
-                    : 'text-muted-foreground'
-                }`}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-        <div className="md:hidden">
-          <MobileNav />
-        </div>
+            })}
+          </nav>
+          <div className="md:hidden">
+            <MobileNav />
+          </div>
 
-        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4">
           {loading ? (
             <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
           ) : user ? (
@@ -407,6 +408,7 @@ export function Header() {
               </Button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </header>
