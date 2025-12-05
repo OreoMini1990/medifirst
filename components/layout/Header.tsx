@@ -387,7 +387,7 @@ export function Header() {
                   size="sm"
                   className="hidden md:flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 px-3"
                 >
-                  <Link href="/community/role/new">
+                  <Link href="/community/new">
                     <Plus className="h-4 w-4" />
                     <span className="text-sm">글쓰기</span>
                   </Link>
