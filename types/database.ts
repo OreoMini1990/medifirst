@@ -20,6 +20,7 @@ export type CommunitySubBoard =
   | 'role' 
   | 'free' 
   | 'qa'
+  | 'notice'
   | 'marketplace'
 
 export type StartupCategory = 
