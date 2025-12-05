@@ -107,13 +107,13 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {paginatedPosts.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-400">
-          게시글이 없습니다.
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-400 font-normal">게시글이 없습니다.</p>
         </div>
       ) : (
-        <ul>
+        <ul className="divide-y divide-slate-100">
           {paginatedPosts.map((post, index) => {
             const category = getBoardTag(post, userRole) || ''
             return (
@@ -137,7 +137,7 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
       )}
 
       {/* 하단 영역 */}
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between pt-6 pb-2 border-t border-slate-100 mt-6">
         {/* 페이지네이션 */}
         <div className="flex justify-center flex-1">
           <Pagination
@@ -151,7 +151,7 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
         <div className="flex justify-end">
           <a
             href={getWriteHref()}
-            className="inline-flex items-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 transition-colors"
+            className="inline-flex items-center rounded-md bg-[#00B992] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#00A882] active:bg-[#009872] transition-colors"
           >
             {activeTab === 'qa' ? '질문하기' : '글쓰기'}
           </a>

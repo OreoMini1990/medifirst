@@ -71,38 +71,40 @@ export function PostListItem({
 
   return (
     <li>
-      <Link href={href}>
+      <Link href={href} className="block">
         <div
           className={clsx(
-            'flex items-center border-b border-slate-200',
-            'hover:bg-slate-50 transition-colors'
+            'flex items-center border-b border-slate-100',
+            'hover:bg-slate-50/50 transition-colors'
           )}
         >
           {/* 제목 + N 배지 */}
-          <div className="flex-1 px-6 py-3.5 flex items-center gap-6 min-w-0">
+          <div className="flex-1 px-6 py-4 flex items-center gap-4 min-w-0">
             {displayCategory && (
-              <span className="text-[14px] font-medium text-[#2879ff] shrink-0 whitespace-nowrap w-[60px]">
+              <span className="text-[12px] font-medium text-slate-500 shrink-0 whitespace-nowrap w-[60px] tracking-tight">
                 {displayCategory}
               </span>
             )}
-            <span className="truncate text-[14px] text-slate-900 min-w-0">
+            <span className="truncate text-[14px] font-normal text-slate-900 min-w-0 leading-relaxed">
               {title}
             </span>
-            {isPinned && (
-              <span className="inline-flex h-5 rounded-sm bg-slate-900 px-2 text-[10px] font-semibold text-white shrink-0">
-                공지
-              </span>
-            )}
-            {newPost && (
-              <span className="inline-flex h-5 rounded-full bg-emerald-500 px-2 text-[10px] font-semibold text-white shrink-0">
-                N
-              </span>
-            )}
+            <div className="flex items-center gap-2 shrink-0 ml-auto">
+              {isPinned && (
+                <span className="inline-flex h-[18px] items-center px-1.5 rounded-sm bg-slate-800 text-[10px] font-semibold text-white leading-none">
+                  공지
+                </span>
+              )}
+              {newPost && (
+                <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#00B992] text-[10px] font-bold text-white leading-none">
+                  N
+                </span>
+              )}
+            </div>
           </div>
 
           {/* 등록일 */}
-          <div className="w-[120px] px-6 py-3.5 text-[13px] text-slate-500 shrink-0">
-            <div className="text-right whitespace-nowrap">{formattedDate}</div>
+          <div className="w-[110px] px-6 py-4 text-[13px] text-slate-400 shrink-0">
+            <div className="text-right whitespace-nowrap font-normal">{formattedDate}</div>
           </div>
         </div>
       </Link>

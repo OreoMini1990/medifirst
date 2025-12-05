@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -45,26 +45,26 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   const pageNumbers = getPageNumbers()
 
   return (
-    <div className="flex justify-center items-center gap-2 mt-6">
+    <div className="flex justify-center items-center gap-1.5">
       <Button
         variant="outline"
         size="sm"
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
-        className="h-9 px-3 rounded-full"
+        className="h-9 px-3 rounded-md border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
       >
         <ChevronLeft className="h-4 w-4" />
-        이전
+        <span className="ml-1">이전</span>
       </Button>
 
       {pageNumbers.map((page) => (
         <button
           key={page}
           className={cn(
-            'h-9 w-9 rounded-full text-sm font-medium transition-colors',
+            'h-9 w-9 rounded-md text-sm font-medium transition-all',
             page === currentPage
-              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ? 'bg-[#00B992] text-white shadow-sm'
+              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
           )}
           onClick={() => onPageChange(page)}
         >
@@ -77,9 +77,9 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         size="sm"
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
-        className="h-9 px-3 rounded-full"
+        className="h-9 px-3 rounded-md border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-40"
       >
-        다음
+        <span className="mr-1">다음</span>
         <ChevronRight className="h-4 w-4" />
       </Button>
     </div>

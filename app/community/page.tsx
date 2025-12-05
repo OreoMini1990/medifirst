@@ -154,22 +154,22 @@ function CommunityContent() {
   }, [userRole, supabase])
 
   return (
-    <div className="min-h-screen bg-white">
-      <main className="mx-auto max-w-5xl px-6 pt-6">
+    <div className="min-h-screen bg-slate-50">
+      <main className="mx-auto max-w-5xl px-6 pt-8 pb-12">
         {/* 상단 제목 영역 */}
-        <section className="pt-12 pb-8">
+        <section className="pt-8 pb-6">
           <div>
-            <h1 className="text-[32px] font-bold text-slate-900">커뮤니티</h1>
-            <p className="mt-3 text-[15px] text-slate-600">
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">커뮤니티</h1>
+            <p className="mt-2 text-sm text-slate-500 font-normal">
               1차의료기관 종사자들을 위한 소통 공간
             </p>
           </div>
         </section>
 
         {/* 얇은 언더라인 탭 */}
-        <div className="border-b border-slate-200 pb-1">
-          <nav className="flex gap-6 text-[14px] items-center justify-between">
-            <div className="flex gap-6">
+        <div className="border-b border-slate-200">
+          <nav className="flex gap-8 text-[14px] items-center justify-between">
+            <div className="flex gap-8">
               {COMMUNITY_TABS.map(tab => (
                 <button
                   key={tab.id}
@@ -178,8 +178,8 @@ function CommunityContent() {
                   className={clsx(
                     'pb-3 -mb-px border-b-2 transition-colors',
                     activeTab === tab.id
-                      ? 'border-emerald-500 text-emerald-500 font-semibold'
-                      : 'border-transparent text-slate-400 hover:text-slate-700'
+                      ? 'border-[#00B992] text-slate-900 font-semibold'
+                      : 'border-transparent text-slate-400 hover:text-slate-600'
                   )}
                 >
                   {tab.label}
@@ -188,7 +188,7 @@ function CommunityContent() {
             </div>
             <div className="flex items-center gap-2">
               <select
-                className="h-8 rounded border border-slate-300 bg-white px-3 text-[13px] text-slate-600"
+                className="h-9 rounded-md border border-slate-300 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#00B992] focus:border-[#00B992]"
                 defaultValue="title"
               >
                 <option value="title">제목</option>
@@ -196,7 +196,7 @@ function CommunityContent() {
                 <option value="author">작성자</option>
               </select>
               <input
-                className="h-8 w-48 rounded border border-slate-300 px-3 text-[13px] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="h-9 w-52 rounded-md border border-slate-300 px-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#00B992] focus:border-[#00B992]"
                 placeholder="게시글 검색"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -206,9 +206,9 @@ function CommunityContent() {
                 onClick={(e) => {
                   e.preventDefault()
                 }}
-                className="h-8 px-3 rounded bg-slate-900 text-[13px] font-semibold text-white hover:bg-slate-800 flex items-center gap-1"
+                className="h-9 px-4 rounded-md bg-slate-900 text-[13px] font-semibold text-white hover:bg-slate-800 active:bg-slate-700 transition-colors flex items-center gap-1.5"
               >
-                <Search className="h-3 w-3" />
+                <Search className="h-3.5 w-3.5" />
                 검색
               </button>
             </div>
@@ -216,18 +216,18 @@ function CommunityContent() {
         </div>
 
         {/* 탭별 콘텐츠 */}
-        <div className="mt-6">
+        <div className="mt-6 bg-white rounded-lg shadow-sm border border-slate-200">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-sm text-slate-500">
               로딩중입니다...
             </div>
           ) : (
-            <>
+            <div className="p-6">
               {activeTab === 'all' && <AllPostsBoard initialPosts={data.all} userRole={userRole} activeTab={activeTab} searchQuery={searchQuery} />}
               {activeTab === 'role' && <RoleCommunity initialPosts={data.role} userRole={userRole} activeTab={activeTab} searchQuery={searchQuery} />}
               {activeTab === 'free' && <FreeBoard initialPosts={data.free} activeTab={activeTab} searchQuery={searchQuery} />}
               {activeTab === 'qa' && <QABoard initialPosts={data.qa} activeTab={activeTab} searchQuery={searchQuery} />}
-            </>
+            </div>
           )}
         </div>
       </main>

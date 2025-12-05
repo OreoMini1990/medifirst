@@ -16,29 +16,20 @@ const categoryLabels: Record<string, string> = {
 interface QABoardProps {
   initialPosts?: Post[]
   activeTab?: string
-  postsPerPage?: number
   searchQuery?: string
 }
 
-export function QABoard({ initialPosts = [], activeTab = 'qa', postsPerPage: externalPostsPerPage, searchQuery: externalSearchQuery }: QABoardProps) {
+export function QABoard({ initialPosts = [], activeTab = 'qa', searchQuery: externalSearchQuery = '' }: QABoardProps) {
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '')
-  const [postsPerPage, setPostsPerPage] = useState(externalPostsPerPage || 20)
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery)
+  const postsPerPage = 10 // 고정값
   
-  // 외부에서 전달된 값이 변경되면 내부 state 업데이트
+  // 외부에서 전달된 searchQuery가 변경되면 내부 state 업데이트
   useEffect(() => {
-    if (externalSearchQuery !== undefined) {
-      setSearchQuery(externalSearchQuery)
-    }
+    setSearchQuery(externalSearchQuery)
   }, [externalSearchQuery])
-  
-  useEffect(() => {
-    if (externalPostsPerPage !== undefined) {
-      setPostsPerPage(externalPostsPerPage)
-    }
-  }, [externalPostsPerPage])
 
   useEffect(() => {
     setPosts(initialPosts)
@@ -66,13 +57,13 @@ export function QABoard({ initialPosts = [], activeTab = 'qa', postsPerPage: ext
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       {paginatedPosts.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-400">
-          질문이 없습니다.
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-400 font-normal">질문이 없습니다.</p>
         </div>
       ) : (
-        <ul>
+        <ul className="divide-y divide-slate-100">
           {paginatedPosts.map((post, index) => (
             <PostListItem
               key={post.id}
@@ -92,7 +83,7 @@ export function QABoard({ initialPosts = [], activeTab = 'qa', postsPerPage: ext
       )}
 
       {/* 하단 영역 */}
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between pt-6 pb-2 border-t border-slate-100 mt-6">
         {/* 페이지네이션 */}
         <div className="flex justify-center flex-1">
           <Pagination
@@ -106,7 +97,7 @@ export function QABoard({ initialPosts = [], activeTab = 'qa', postsPerPage: ext
         <div className="flex justify-end">
           <a
             href={getWriteHref()}
-            className="inline-flex items-center rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600 transition-colors"
+            className="inline-flex items-center rounded-md bg-[#00B992] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#00A882] active:bg-[#009872] transition-colors"
           >
             질문하기
           </a>
