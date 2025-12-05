@@ -21,12 +21,14 @@ import { Chrome } from 'lucide-react'
 
 const ROLE_OPTIONS = [
   { label: '의사', value: 'doctor' },
+  { label: '봉직의', value: 'locum_doctor' },
+  { label: '개원의', value: 'manager' },
   { label: '간호사', value: 'nurse' },
   { label: '간호조무사', value: 'assistant' },
   { label: '물리치료사', value: 'pt' },
   { label: '방사선사', value: 'rt' },
-  { label: '행정·원무', value: 'admin_staff' },
-  { label: '원장/관리자', value: 'manager' },
+  { label: '임상병리사', value: 'cp' },
+  { label: '원무', value: 'admin_staff' },
   { label: '기타', value: 'etc' },
 ] as const
 
@@ -54,7 +56,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [role, setRole] = useState<UserRole | ''>('')
+  const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([])
   const [workplaceName, setWorkplaceName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -192,8 +194,8 @@ export default function SignupPage() {
     }
 
     // 필수 필드 검증
-    if (!role) {
-      setError('직업을 선택해주세요.')
+    if (selectedRoles.length === 0) {
+      setError('직업을 최소 1개 이상 선택해주세요.')
       setLoading(false)
       return
     }
@@ -204,13 +206,16 @@ export default function SignupPage() {
       return
     }
 
+    // 첫 번째 선택된 직업을 role로 설정 (하위 호환성)
+    const primaryRole = selectedRoles[0] as UserRole
+    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           display_name: displayName.trim() || null,
-          role: role as UserRole,
+          role: primaryRole,
           workplace_name: workplaceName.trim(),
         },
       },
@@ -260,7 +265,8 @@ export default function SignupPage() {
           .from('profiles')
           .update({
             display_name: displayName.trim() || null,
-            role: role as UserRole,
+            role: primaryRole,
+            roles: selectedRoles,
             workplace_name: workplaceName.trim(),
             hospital_name: workplaceName.trim(), // 하위 호환성
           })
@@ -286,7 +292,8 @@ export default function SignupPage() {
             id: authData.user.id,
             email,
             display_name: displayName.trim() || null,
-            role: role as UserRole,
+            role: primaryRole,
+            roles: selectedRoles,
             workplace_name: workplaceName.trim(),
             hospital_name: workplaceName.trim(), // 하위 호환성
           })
@@ -304,7 +311,8 @@ export default function SignupPage() {
               .from('profiles')
               .update({
                 display_name: displayName.trim() || null,
-                role: role as UserRole,
+                role: primaryRole,
+                roles: selectedRoles,
                 workplace_name: workplaceName.trim(),
                 hospital_name: workplaceName.trim(),
               })
@@ -352,60 +360,63 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>회원가입</CardTitle>
-          <CardDescription>
+    <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center bg-gradient-to-br from-emerald-50/50 via-white to-slate-50 py-12 px-4">
+      <Card className="w-full max-w-md shadow-xl border-emerald-100">
+        <CardHeader className="space-y-2 pb-6">
+          <CardTitle className="text-2xl font-bold text-slate-900">회원가입</CardTitle>
+          <CardDescription className="text-slate-600">
             MediFirst에 가입하여 1차의료 커뮤니티에 참여하세요
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">이메일</Label>
+              <Label htmlFor="email" className="text-slate-700 font-medium">이메일</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="예) example@email.com"
                 value={email}
                 onChange={handleEmailChange}
+                className="border-slate-200 focus:border-[#00B992] focus:ring-[#00B992]"
                 required
               />
               {emailError && (
-                <div className="text-sm text-destructive">{emailError}</div>
+                <div className="text-sm text-red-600">{emailError}</div>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">비밀번호</Label>
+              <Label htmlFor="password" className="text-slate-700 font-medium">비밀번호</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="대소문자, 특수문자 포함 6자 이상"
                 value={password}
                 onChange={handlePasswordChange}
+                className="border-slate-200 focus:border-[#00B992] focus:ring-[#00B992]"
                 required
               />
               {passwordError && (
-                <div className="text-sm text-destructive">{passwordError}</div>
+                <div className="text-sm text-red-600">{passwordError}</div>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="passwordConfirm">비밀번호 확인</Label>
+              <Label htmlFor="passwordConfirm" className="text-slate-700 font-medium">비밀번호 확인</Label>
               <Input
                 id="passwordConfirm"
                 type="password"
                 placeholder="비밀번호를 다시 입력해주세요"
                 value={passwordConfirm}
                 onChange={handlePasswordConfirmChange}
+                className="border-slate-200 focus:border-[#00B992] focus:ring-[#00B992]"
                 required
               />
               {passwordConfirmError && (
-                <div className="text-sm text-destructive">{passwordConfirmError}</div>
+                <div className="text-sm text-red-600">{passwordConfirmError}</div>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="displayName">닉네임</Label>
+              <Label htmlFor="displayName" className="text-slate-700 font-medium">닉네임</Label>
               <Input
                 id="displayName"
                 type="text"
@@ -414,51 +425,74 @@ export default function SignupPage() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 onFocus={handleNicknameFocus}
                 onBlur={handleNicknameBlur}
+                className="border-slate-200 focus:border-[#00B992] focus:ring-[#00B992]"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-slate-500">
                 기본 닉네임이 생성되었습니다. 클릭하여 수정할 수 있습니다.
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">직업 *</Label>
-              <Select value={role} onValueChange={(value) => setRole(value as UserRole)} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="직업을 선택해주세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-slate-700 font-medium">직업 * (복수 선택 가능)</Label>
+              <div className="grid grid-cols-2 gap-2.5 mt-2">
+                {ROLE_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex items-center space-x-2 cursor-pointer p-2.5 rounded-lg border transition-all ${
+                      selectedRoles.includes(option.value as UserRole)
+                        ? 'border-[#00B992] bg-emerald-50 shadow-sm'
+                        : 'border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.includes(option.value as UserRole)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRoles([...selectedRoles, option.value as UserRole])
+                        } else {
+                          setSelectedRoles(selectedRoles.filter(r => r !== option.value))
+                        }
+                      }}
+                      className="w-4 h-4 text-[#00B992] border-slate-300 rounded focus:ring-[#00B992] focus:ring-2"
+                    />
+                    <span className="text-sm text-slate-700 font-medium">{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedRoles.length === 0 && (
+                <p className="text-xs text-red-600 mt-1">직업을 최소 1개 이상 선택해주세요.</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="workplaceName">근무지 *</Label>
+              <Label htmlFor="workplaceName" className="text-slate-700 font-medium">근무지 *</Label>
               <Input
                 id="workplaceName"
                 type="text"
                 placeholder="예) 가나다라정형외과의원"
                 value={workplaceName}
                 onChange={(e) => setWorkplaceName(e.target.value)}
+                className="border-slate-200 focus:border-[#00B992] focus:ring-[#00B992]"
                 required
               />
             </div>
             {error && (
-              <div className="text-sm text-destructive">{error}</div>
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">{error}</div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button 
+              type="submit" 
+              className="w-full bg-[#00B992] hover:bg-[#00A882] text-white font-semibold py-6 text-base shadow-md hover:shadow-lg transition-all" 
+              disabled={loading}
+            >
               {loading ? '가입 중...' : '회원가입'}
             </Button>
           </form>
 
             <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <Separator />
+              <Separator className="border-slate-200" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-background px-2 text-muted-foreground">
+              <span className="bg-white px-3 text-slate-500">
                 또는
               </span>
             </div>
@@ -467,11 +501,11 @@ export default function SignupPage() {
           <Button
             type="button"
             variant="outline"
-            className="w-full"
+            className="w-full border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium py-6"
             onClick={handleGoogleSignup}
             disabled={loading}
           >
-            <Chrome className="mr-2 h-4 w-4" />
+            <Chrome className="mr-2 h-5 w-5" />
             구글로 가입하기
           </Button>
 

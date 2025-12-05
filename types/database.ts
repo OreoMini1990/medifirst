@@ -1,12 +1,14 @@
 export type UserRole = 
-  | 'doctor' 
-  | 'nurse' 
-  | 'assistant' 
-  | 'pt' 
-  | 'rt' 
-  | 'admin_staff'
-  | 'manager'
-  | 'etc'
+  | 'doctor'        // 의사
+  | 'locum_doctor'  // 봉직의 (페닥)
+  | 'manager'       // 원장
+  | 'nurse'         // 간호사
+  | 'assistant'     // 간호조무사
+  | 'pt'            // 물리치료사
+  | 'rt'            // 방사선사
+  | 'cp'            // 임상병리사 (임병)
+  | 'admin_staff'   // 원무 (행정)
+  | 'etc'           // 기타
 
 export type BoardType = 
   | 'community' 
@@ -18,6 +20,7 @@ export type CommunitySubBoard =
   | 'role' 
   | 'free' 
   | 'qa'
+  | 'marketplace'
 
 export type StartupCategory = 
   | 'site'         // 개원입지
@@ -43,6 +46,7 @@ export interface Profile {
   role: UserRole | null
   workplace_name: string | null  // 근무지 이름 (병원명, 의원명 등)
   workplace_type: string | null  // 'clinic' | 'hospital' | 'etc' (선택사항)
+  avatar_url?: string | null  // 프로필 이미지 URL
   created_at: string
   updated_at: string
   // 하위 호환성을 위해 hospital_name도 유지 (deprecated)
@@ -94,6 +98,7 @@ export interface Job {
   position: UserRole
   description: string
   region: string
+  specialty: string | null
   employment_type: EmploymentType
   salary_range: string | null
   contact: string

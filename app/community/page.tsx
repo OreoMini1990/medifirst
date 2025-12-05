@@ -12,80 +12,122 @@ import { createClient } from '@/lib/supabase/client'
 import type { Post, UserRole } from '@/types/database'
 import { Search } from 'lucide-react'
 
-type TabKey = 'all' | 'role' | 'free' | 'qa'
+type TabKey = 'all' | 'role' | 'communication' | 'marketplace'
 
 const COMMUNITY_TABS = [
   { id: 'all', label: '전체글' },
-  { id: 'role', label: '직업별 커뮤니티' },
-  { id: 'free', label: '자유게시판' },
-  { id: 'qa', label: '질문게시판' },
+  { id: 'role', label: '직무별 아지트' },
+  { id: 'communication', label: '소통광장' },
+  { id: 'marketplace', label: '장터' },
 ]
+
+// 태그 타입 정의
+type AllTag = 'all' | 'best' | 'hot'
+type RoleTag = UserRole
+type CommunicationTag = 'medical' | 'free' | 'question' | 'info' | 'restaurant' | 'anonymous'
+type MarketplaceTag = 'sell' | 'buy'
+
+type ActiveTag = AllTag | RoleTag | CommunicationTag | MarketplaceTag
 
 function CommunityContent() {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
+  const tagParam = searchParams.get('tag')
   const [activeTab, setActiveTab] = useState<TabKey>('all')
+  const [activeTag, setActiveTag] = useState<ActiveTag | null>(tagParam as ActiveTag || null)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [data, setData] = useState<{
     all: (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[]
     role: Post[]
-    free: Post[]
-    qa: Post[]
-  }>({ all: [], role: [], free: [], qa: [] })
-  const [userRole, setUserRole] = useState<UserRole | null>(null)
+    communication: Post[]
+    marketplace: Post[]
+  }>({ all: [], role: [], communication: [], marketplace: [] })
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]) // 복수 직무 지원
   const supabase = createClient()
 
   useEffect(() => {
-    if (tabParam === 'free' || tabParam === 'qa' || tabParam === 'role' || tabParam === 'all') {
+    if (tabParam === 'communication' || tabParam === 'marketplace' || tabParam === 'role' || tabParam === 'all') {
       setActiveTab(tabParam as TabKey)
     }
   }, [tabParam])
 
-  // 사용자 role 가져오기
   useEffect(() => {
-    async function fetchUserRole() {
+    if (tagParam) {
+      setActiveTag(tagParam as ActiveTag)
+    }
+  }, [tagParam])
+
+  // 사용자 role 가져오기 (복수 직무 지원)
+  useEffect(() => {
+    async function fetchUserRoles() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, roles') // roles는 복수 직무를 저장할 필드 (JSONB 배열)
           .eq('id', user.id)
           .single()
 
-        if (profile?.role) {
-          setUserRole(profile.role as UserRole)
+        if (profile) {
+          // 복수 직무 지원: roles 배열이 있으면 사용, 없으면 role 단일값 사용
+          const roles: UserRole[] = []
+          if (profile.roles) {
+            // JSONB 배열 파싱
+            try {
+              const rolesArray = typeof profile.roles === 'string' 
+                ? JSON.parse(profile.roles) 
+                : profile.roles
+              if (Array.isArray(rolesArray)) {
+                roles.push(...rolesArray.filter((r): r is UserRole => r !== null && r !== ''))
+              }
+            } catch (e) {
+              console.error('Error parsing roles:', e)
+            }
+          }
+          // roles가 비어있으면 role 단일값 사용
+          if (roles.length === 0 && profile.role) {
+            roles.push(profile.role as UserRole)
+          }
+          setUserRoles(roles)
         }
       } catch (error) {
-        console.error('Error fetching user role:', error)
+        console.error('Error fetching user roles:', error)
       }
     }
-    fetchUserRole()
+    fetchUserRoles()
   }, [supabase])
 
   // 모든 게시판 데이터 한 번에 가져오기
   useEffect(() => {
     async function fetchAllData() {
-      if (!userRole) {
-        setLoading(false)
-        return
-      }
-
-      setLoading(true)
+      // 로딩 상태를 최소화: 데이터를 먼저 표시하고 카운트는 나중에 업데이트
       try {
-        // 전체글 (role + free + qa 합치기)
-        const [roleResult, freeResult, qaResult] = await Promise.all([
-          supabase
-            .from('posts')
-            .select('*, profiles!author_id(display_name, role)')
-            .eq('board', 'community')
-            .eq('sub_board', 'role')
-            .eq('category', userRole)
-            .is('deleted_at', null)
-            .order('is_pinned', { ascending: false })
-            .order('created_at', { ascending: false }),
+        // 직무별 아지트: 로그인한 경우 사용자 직무 게시글, 로그인 안한 경우 전체 직무 게시글
+        let roleQuery = supabase
+          .from('posts')
+          .select('*, profiles!author_id(display_name, role)')
+          .eq('board', 'community')
+          .eq('sub_board', 'role')
+          .is('deleted_at', null)
+        
+        // 로그인한 경우에만 직무 필터링, 로그인 안한 경우 전체 표시
+        if (userRoles.length > 0) {
+          roleQuery = roleQuery.in('category', userRoles)
+        }
+        
+        const roleResult = await roleQuery
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false })
+
+        if (roleResult.error) {
+          console.error('Error fetching role posts:', JSON.stringify(roleResult.error, null, 2))
+        }
+
+        // 소통광장 (자유 + 질문 통합)
+        const [freeResult, qaResult] = await Promise.all([
           supabase
             .from('posts')
             .select('*, profiles!author_id(display_name, role)')
@@ -99,59 +141,139 @@ function CommunityContent() {
             .select('*, profiles!author_id(display_name, role)')
             .eq('board', 'community')
             .eq('sub_board', 'qa')
-            .eq('is_question', true)
             .is('deleted_at', null)
             .order('is_pinned', { ascending: false })
             .order('created_at', { ascending: false }),
         ])
 
+        if (freeResult.error) {
+          console.error('Error fetching free posts:', JSON.stringify(freeResult.error, null, 2))
+        }
+        if (qaResult.error) {
+          console.error('Error fetching qa posts:', JSON.stringify(qaResult.error, null, 2))
+        }
+
+        // 장터 게시판
+        const marketplaceResult = await supabase
+          .from('posts')
+          .select('*, profiles!author_id(display_name, role)')
+          .eq('board', 'community')
+          .eq('sub_board', 'marketplace')
+          .is('deleted_at', null)
+          .order('is_pinned', { ascending: false })
+          .order('created_at', { ascending: false })
+
+        if (marketplaceResult.error) {
+          console.error('Error fetching marketplace posts:', JSON.stringify(marketplaceResult.error, null, 2))
+        }
+
+        // 전체글: 유저의 해당 직무 글 + 소통광장 + 장터만 (다른 직무 글은 제외)
         const allPosts: Post[] = []
-        if (roleResult.data) allPosts.push(...roleResult.data)
+        // 유저의 직무 게시글만 추가
+        if (roleResult.data && userRoles.length > 0) {
+          allPosts.push(...roleResult.data.filter(post => userRoles.includes(post.category as UserRole)))
+        }
+        // 소통광장 게시글 추가
         if (freeResult.data) allPosts.push(...freeResult.data)
         if (qaResult.data) allPosts.push(...qaResult.data)
+        // 장터 게시글 추가
+        if (marketplaceResult.data) allPosts.push(...marketplaceResult.data)
 
-        allPosts.sort((a, b) => {
+        // 베스트 정렬 (조회순, 추후 월간추천순으로 변경 예정)
+        const sortedAllPosts = [...allPosts].sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1
+          if (!a.is_pinned && b.is_pinned) return 1
+          // 베스트는 조회수 기준 (추후 월간 추천수로 변경)
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        })
+
+        // 소통광장 데이터 통합
+        const communicationPosts: Post[] = []
+        if (freeResult.data) communicationPosts.push(...freeResult.data)
+        if (qaResult.data) communicationPosts.push(...qaResult.data)
+        communicationPosts.sort((a, b) => {
           if (a.is_pinned && !b.is_pinned) return -1
           if (!a.is_pinned && b.is_pinned) return 1
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         })
 
-        // 각 게시글에 댓글수, 좋아요수, 조회수 추가
-        const allPostsWithCounts = await Promise.all(
-          allPosts.map(async (post) => {
-            const [commentCount, likeCount, viewCount] = await Promise.all([
-              supabase.from('comments').select('*', { count: 'exact', head: true }).eq('post_id', post.id).is('deleted_at', null),
-              supabase.from('post_likes').select('*', { count: 'exact', head: true }).eq('post_id', post.id),
-              supabase.from('post_views').select('*', { count: 'exact', head: true }).eq('post_id', post.id),
-            ])
-            return {
-              ...post,
-              commentCount: commentCount.count || 0,
-              likeCount: likeCount.count || 0,
-              viewCount: viewCount.count || 0,
-            }
+        // 각 게시글에 댓글수, 좋아요수, 조회수 추가 (배치 처리로 성능 개선)
+        const addCounts = async (posts: Post[]) => {
+          if (posts.length === 0) return []
+          
+          // 모든 게시글 ID 수집
+          const postIds = posts.map(p => p.id)
+          
+          // 배치로 댓글수, 좋아요수, 조회수 가져오기
+          const [commentsResult, likesResult, viewsResult] = await Promise.all([
+            supabase.from('comments').select('post_id').in('post_id', postIds).is('deleted_at', null),
+            supabase.from('post_likes').select('post_id').in('post_id', postIds),
+            supabase.from('post_views').select('post_id').in('post_id', postIds),
+          ])
+          
+          // 카운트 맵 생성
+          const commentCounts = new Map<string, number>()
+          const likeCounts = new Map<string, number>()
+          const viewCounts = new Map<string, number>()
+          
+          commentsResult.data?.forEach(c => {
+            commentCounts.set(c.post_id, (commentCounts.get(c.post_id) || 0) + 1)
           })
-        )
+          likesResult.data?.forEach(l => {
+            likeCounts.set(l.post_id, (likeCounts.get(l.post_id) || 0) + 1)
+          })
+          viewsResult.data?.forEach(v => {
+            viewCounts.set(v.post_id, (viewCounts.get(v.post_id) || 0) + 1)
+          })
+          
+          // 게시글에 카운트 추가
+          return posts.map(post => ({
+            ...post,
+            commentCount: commentCounts.get(post.id) || 0,
+            likeCount: likeCounts.get(post.id) || 0,
+            viewCount: viewCounts.get(post.id) || 0,
+          }))
+        }
 
+        // 데이터를 먼저 표시 (카운트 없이)
+        setData({
+          all: sortedAllPosts.map(p => ({ ...p, commentCount: 0, likeCount: 0, viewCount: 0 })) as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+          role: (roleResult.data || []).map(p => ({ ...p, commentCount: 0, likeCount: 0, viewCount: 0 })) as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+          communication: communicationPosts.map(p => ({ ...p, commentCount: 0, likeCount: 0, viewCount: 0 })) as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+          marketplace: (marketplaceResult.data || []).map(p => ({ ...p, commentCount: 0, likeCount: 0, viewCount: 0 })) as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+        })
+        setLoading(false) // 데이터를 먼저 표시하고 로딩 종료
+
+        // 카운트는 백그라운드에서 업데이트
+        const [allPostsWithCounts, rolePostsWithCounts, communicationPostsWithCounts, marketplacePostsWithCounts] = await Promise.all([
+          addCounts(sortedAllPosts),
+          addCounts(roleResult.data || []),
+          addCounts(communicationPosts),
+          addCounts(marketplaceResult.data || [])
+        ])
+
+        // 카운트 업데이트
         setData({
           all: allPostsWithCounts as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
-          role: roleResult.data || [],
-          free: freeResult.data || [],
-          qa: qaResult.data || [],
+          role: rolePostsWithCounts as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+          communication: communicationPostsWithCounts as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
+          marketplace: marketplacePostsWithCounts as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[],
         })
       } catch (error) {
         console.error('Error fetching posts:', error)
-      } finally {
+        // 에러 발생 시 빈 배열로 초기화
+        setData({
+          all: [],
+          role: [],
+          communication: [],
+          marketplace: [],
+        })
         setLoading(false)
       }
     }
 
-    if (userRole) {
-      fetchAllData()
-    } else {
-      setLoading(false)
-    }
-  }, [userRole, supabase])
+    fetchAllData()
+  }, [userRoles, supabase])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -174,7 +296,10 @@ function CommunityContent() {
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id as TabKey)}
+                  onClick={() => {
+                    setActiveTab(tab.id as TabKey)
+                    setActiveTag(null) // 탭 변경 시 태그 초기화
+                  }}
                   className={clsx(
                     'pb-3 -mb-px border-b-2 transition-colors',
                     activeTab === tab.id
@@ -215,6 +340,152 @@ function CommunityContent() {
           </nav>
         </div>
 
+        {/* 태그 필터 영역 */}
+        {activeTab && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {activeTab === 'all' && (
+              <>
+                <button
+                  onClick={() => setActiveTag('all')}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                    activeTag === 'all' || !activeTag
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  )}
+                >
+                  전체
+                </button>
+                <button
+                  onClick={() => setActiveTag('best')}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                    activeTag === 'best'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  )}
+                >
+                  베스트
+                </button>
+                <button
+                  onClick={() => setActiveTag('hot')}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                    activeTag === 'hot'
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  )}
+                >
+                  핫이슈
+                </button>
+              </>
+            )}
+            {activeTab === 'role' && (
+              <>
+                {userRoles.length > 0 ? (
+                  // 원장, 페닥, 의사 순으로 정렬
+                  [...userRoles].sort((a, b) => {
+                    const order: Record<UserRole, number> = {
+                      manager: 1,
+                      locum_doctor: 2,
+                      doctor: 3,
+                      nurse: 4,
+                      assistant: 5,
+                      pt: 6,
+                      rt: 7,
+                      cp: 8,
+                      admin_staff: 9,
+                      etc: 10,
+                    }
+                    return (order[a] || 99) - (order[b] || 99)
+                  }).map((role) => {
+                    const roleLabels: Record<UserRole, string> = {
+                      doctor: '의사',
+                      locum_doctor: '페닥',
+                      manager: '원장', // 태그는 2글자 규칙에 따라 "원장"으로 표시
+                      nurse: 'RN',
+                      assistant: 'AN',
+                      pt: '물치',
+                      rt: '방사',
+                      cp: '임병',
+                      admin_staff: '원무',
+                      etc: '기타',
+                    }
+                    return (
+                      <button
+                        key={role}
+                        onClick={() => setActiveTag(role)}
+                        className={clsx(
+                          'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                          activeTag === role
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        )}
+                      >
+                        {roleLabels[role] || role}
+                      </button>
+                    )
+                  })
+                ) : (
+                  <span className="text-xs text-slate-500">로그인 후 직무별 태그가 표시됩니다</span>
+                )}
+              </>
+            )}
+            {activeTab === 'communication' && (
+              <>
+                {(['medical', 'free', 'question', 'info', 'restaurant', 'anonymous'] as CommunicationTag[]).map((tag) => {
+                  const tagLabels: Record<CommunicationTag, string> = {
+                    medical: '의학',
+                    free: '자유',
+                    question: '질문',
+                    info: '정보',
+                    restaurant: '맛집',
+                    anonymous: '익명',
+                  }
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => setActiveTag(tag)}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                        activeTag === tag
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      )}
+                    >
+                      {tagLabels[tag]}
+                    </button>
+                  )
+                })}
+              </>
+            )}
+            {activeTab === 'marketplace' && (
+              <>
+                {(['sell', 'buy'] as MarketplaceTag[]).map((tag) => {
+                  const tagLabels: Record<MarketplaceTag, string> = {
+                    sell: '팝니다',
+                    buy: '삽니다',
+                  }
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => setActiveTag(tag)}
+                      className={clsx(
+                        'px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                        activeTag === tag
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      )}
+                    >
+                      {tagLabels[tag]}
+                    </button>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        )}
+
         {/* 탭별 콘텐츠 */}
         <div className="mt-6 bg-white rounded-lg shadow-sm border border-slate-200">
           {loading ? (
@@ -223,10 +494,10 @@ function CommunityContent() {
             </div>
           ) : (
             <div className="p-6">
-              {activeTab === 'all' && <AllPostsBoard initialPosts={data.all} userRole={userRole} activeTab={activeTab} searchQuery={searchQuery} />}
-              {activeTab === 'role' && <RoleCommunity initialPosts={data.role} userRole={userRole} activeTab={activeTab} searchQuery={searchQuery} />}
-              {activeTab === 'free' && <FreeBoard initialPosts={data.free} activeTab={activeTab} searchQuery={searchQuery} />}
-              {activeTab === 'qa' && <QABoard initialPosts={data.qa} activeTab={activeTab} searchQuery={searchQuery} />}
+              {activeTab === 'all' && <AllPostsBoard initialPosts={data.all} userRole={userRoles[0] || null} activeTab={activeTab} searchQuery={searchQuery} activeTag={activeTag} />}
+              {activeTab === 'role' && <RoleCommunity initialPosts={data.role} userRole={userRoles[0] || null} activeTab={activeTab} searchQuery={searchQuery} activeTag={activeTag} userRoles={userRoles} />}
+              {activeTab === 'communication' && <FreeBoard initialPosts={data.communication} activeTab={activeTab} searchQuery={searchQuery} activeTag={activeTag} />}
+              {activeTab === 'marketplace' && <FreeBoard initialPosts={data.marketplace} activeTab={activeTab} searchQuery={searchQuery} activeTag={activeTag} />}
             </div>
           )}
         </div>

@@ -138,89 +138,70 @@ export function NoticeBoard() {
   }, [fetchPosts])
 
   return (
-    <div className="space-y-4">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">최신고시</h2>
-        {isStaff && (
-          <Button asChild className="ml-auto rounded-full bg-black text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black/90">
-            <Link href="/claims/notice/new">
-              <PenLine className="h-4 w-4" />
-              글쓰기
-            </Link>
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-0">
       {/* 게시글 리스트 */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">로딩 중...</div>
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-400 font-normal">로딩 중...</p>
+        </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          게시글이 없습니다.
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-400 font-normal">게시글이 없습니다.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
-          {posts.map((post) => (
-            <PostListItem
-              key={post.id}
-              href={`/claims/notice/${post.id}`}
-              title={post.title}
-              authorName={post.profiles?.display_name || '익명'}
-              avatarUrl={null}
-              commentCount={post.commentCount || 0}
-              likeCount={0}
-              viewCount={post.view_count || 0}
-              createdAt={post.created_at}
-            />
-          ))}
+        <ul className="divide-y divide-slate-100">
+          {posts.map((post, index) => {
+            // 1달 이내 게시글인지 확인 (30일)
+            const isNewWithinMonth = () => {
+              if (!post.created_at) return false
+              const now = new Date()
+              const created = new Date(post.created_at)
+              const diffDays = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)
+              return diffDays <= 30
+            }
+            
+            return (
+              <PostListItem
+                key={post.id}
+                href={`/claims/notice/${post.id}`}
+                title={post.title}
+                categoryLabel="고시"
+                createdAt={post.created_at}
+                updatedAt={post.updated_at}
+                isPinned={post.is_pinned || false}
+                index={index}
+                likeCount={0}
+                commentCount={post.commentCount || 0}
+                viewCount={post.view_count || 0}
+                isNewWithinMonth={isNewWithinMonth()}
+                hasBackground={true}
+              />
+            )
+          })}
         </ul>
       )}
 
-      {/* 페이지네이션 */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
-
-      {/* 검색 바 */}
-      <div className="mt-4 flex w-full max-w-xl mx-auto items-center gap-2">
-        <select className="h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm">
-          <option value="title">제목</option>
-          <option value="content">내용</option>
-          <option value="author">작성자</option>
-        </select>
-        <input
-          className="flex-1 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          placeholder="검색할 단어 입력"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              setCurrentPage(1)
-            }
-          }}
-        />
-        <Button
-          className="h-10 px-4 rounded-full bg-slate-900 dark:bg-slate-800 text-white text-sm flex items-center gap-1 hover:bg-slate-800 dark:hover:bg-slate-700"
-          onClick={() => setCurrentPage(1)}
-        >
-          <Search className="h-4 w-4" />
-          검색
-        </Button>
-        {searchQuery && (
-          <Button
-            variant="outline"
-            className="h-10 px-4 rounded-full text-sm"
-            onClick={() => {
-              setSearchQuery('')
-              setCurrentPage(1)
-            }}
-          >
-            초기화
-          </Button>
+      {/* 하단 영역 */}
+      <div className="flex items-center justify-between pt-6 pb-2 border-t border-slate-100 mt-6">
+        {/* 페이지네이션 */}
+        <div className="flex justify-center flex-1">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+        
+        {/* 글쓰기 버튼 */}
+        {isStaff && (
+          <div className="flex justify-end">
+            <a
+              href="/claims/notice/new"
+              className="inline-flex items-center rounded-md bg-[#00B992] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#00A882] active:bg-[#009872] transition-colors"
+            >
+              글쓰기
+            </a>
+          </div>
         )}
       </div>
     </div>

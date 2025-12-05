@@ -14,6 +14,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 import type { Profile } from '@/types/database'
 import { MobileNav } from './MobileNav'
+import { Bell, Plus } from 'lucide-react'
 
 type NavItem = {
   href: string
@@ -332,14 +333,16 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white">
-      <div className="mx-auto max-w-5xl px-6">
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-slate-200">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
+          {/* 왼쪽: 로고 */}
+          <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
             <span className="text-xl font-bold text-slate-900">MediFirst</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
+          {/* 중앙: 네비게이션 */}
+          <nav className="hidden md:flex items-center gap-6 flex-1 justify-center">
             {navItems.map((item) => {
               if (item.external) {
                 return (
@@ -348,7 +351,7 @@ export function Header() {
                     href={item.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[15px] font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                    className="text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors whitespace-nowrap"
                   >
                     {item.label}
                   </a>
@@ -358,7 +361,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-[15px] font-medium transition-colors ${
+                  className={`text-sm font-medium transition-colors whitespace-nowrap ${
                     pathname === item.href
                       ? 'text-emerald-500 font-semibold'
                       : 'text-slate-700 hover:text-slate-900'
@@ -369,45 +372,70 @@ export function Header() {
               )
             })}
           </nav>
+          
+          {/* 모바일 메뉴 */}
           <div className="md:hidden">
             <MobileNav />
           </div>
 
-          <div className="flex items-center space-x-4">
-          {loading ? (
-            <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-          ) : user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {user.display_name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+          {/* 오른쪽: 글쓰기, 알림, 아바타 */}
+          <div className="flex items-center space-x-3 flex-shrink-0">
+            {user && (
+              <>
+                <Button
+                  asChild
+                  size="sm"
+                  className="hidden md:flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 px-3"
+                >
+                  <Link href="/community/role/new">
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm">글쓰기</span>
+                  </Link>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <div className="px-2 py-1.5 text-sm">
-                  <div className="font-medium">{user.display_name || '사용자'}</div>
-                  <div className="text-xs text-muted-foreground">{user.email}</div>
-                </div>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">프로필 설정</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut}>로그아웃</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" asChild>
-                <Link href="/login">로그인</Link>
-              </Button>
-              <Button asChild>
-                <Link href="/signup">회원가입</Link>
-              </Button>
-            </div>
-          )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="relative h-9 w-9 p-0"
+                >
+                  <Bell className="h-5 w-5 text-slate-600" />
+                  <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                </Button>
+              </>
+            )}
+            {loading ? (
+              <div className="h-9 w-9 animate-pulse rounded-full bg-muted" />
+            ) : user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="bg-emerald-500 text-white text-sm">
+                        {user.display_name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="px-2 py-1.5 text-sm">
+                    <div className="font-medium">{user.display_name || '사용자'}</div>
+                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                  </div>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">프로필 설정</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>로그아웃</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">로그인</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/signup">회원가입</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

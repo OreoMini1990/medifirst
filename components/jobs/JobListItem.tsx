@@ -1,8 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { MapPin, Briefcase } from 'lucide-react'
 
 interface JobListItemProps {
   href: string
@@ -23,62 +21,60 @@ export function JobListItem({
   hospitalName,
   createdAt,
 }: JobListItemProps) {
-  const formatRelativeTime = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor(diff / (1000 * 60))
 
-    if (days > 7) {
-      return date.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
+  const formatDate = (input: string | Date) => {
+    const d = typeof input === 'string' ? new Date(input) : input
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+    const diffMinutes = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    
+    // 24시간 이내
+    if (diffMs < 24 * 60 * 60 * 1000) {
+      if (diffMinutes < 60) {
+        return `${diffMinutes}분 전`
+      } else {
+        return `${diffHours}시간 전`
+      }
     }
-    if (days > 0) {
-      return days === 1 ? '어제' : `${days}일 전`
-    }
-    if (hours > 0) {
-      return `${hours}시간 전`
-    }
-    if (minutes > 0) {
-      return `${minutes}분 전`
-    }
-    return '방금 전'
+    
+    // 24시간 이상
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
   }
+
+  const formattedDate = formatDate(createdAt)
 
   return (
     <li>
-      <Link href={href}>
-        <div className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer border-b border-slate-100 dark:border-slate-800 transition-colors">
-          {/* 왼쪽 아이콘 */}
-          <div className="h-8 w-8 mt-1 shrink-0 flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900">
-            <Briefcase className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          </div>
-
-          {/* 본문 영역 */}
-          <div className="flex-1 min-w-0">
-            {/* 첫 줄: 직역 태그 + 제목 */}
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs px-2 py-0.5 shrink-0 font-medium">
-                {positionLabel}
-              </span>
-              <p className="flex-1 truncate text-sm md:text-base font-medium text-slate-900 dark:text-slate-100">
-                {title}
-              </p>
-            </div>
-
-            {/* 둘째 줄: 메타 정보 */}
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {region}
-              </span>
+      <Link href={href} className="block">
+        <div className="flex items-center border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+          {/* 제목 + 태그 */}
+          <div className="flex-1 px-6 py-4 flex items-center gap-4 min-w-0">
+            <span className="text-[12px] font-medium text-slate-500 shrink-0 whitespace-nowrap w-[60px] tracking-tight">
+              {positionLabel}
+            </span>
+            <span className="truncate text-[14px] font-normal text-slate-900 min-w-0 leading-relaxed">
+              {title}
+            </span>
+            <div className="flex items-center gap-2 shrink-0 ml-auto text-xs text-slate-400">
+              <span>{region}</span>
+              <span>·</span>
               <span>{employmentTypeLabel}</span>
               {hospitalName && (
-                <span className="font-medium text-slate-700 dark:text-slate-300">{hospitalName}</span>
+                <>
+                  <span>·</span>
+                  <span>{hospitalName}</span>
+                </>
               )}
-              <span>{formatRelativeTime(createdAt)}</span>
             </div>
+          </div>
+
+          {/* 등록일 */}
+          <div className="w-[110px] px-6 py-4 text-[13px] text-slate-400 shrink-0">
+            <div className="text-right whitespace-nowrap font-normal">{formattedDate}</div>
           </div>
         </div>
       </Link>

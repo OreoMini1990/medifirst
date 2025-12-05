@@ -21,9 +21,11 @@ interface CommentItemProps {
   postAuthorId: string | null
   onUpdate: () => void
   isReply?: boolean
+  isPostAnonymous?: boolean
+  isStaff?: boolean
 }
 
-export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, isReply = false }: CommentItemProps) {
+export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, isReply = false, isPostAnonymous = false, isStaff = false }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isReplying, setIsReplying] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
@@ -183,14 +185,29 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
       <div className="flex items-start gap-3 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
         <Avatar className="h-8 w-8 shrink-0">
           <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-            {(comment.profiles?.display_name || '익명')[0]?.toUpperCase() || '?'}
+            {(() => {
+              const displayName = isPostAnonymous && !isStaff 
+                ? '익명' 
+                : (comment.profiles?.display_name || '익명')
+              return displayName[0]?.toUpperCase() || '?'
+            })()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className={`font-medium text-sm ${isAuthor ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-slate-100'}`}>
-              {comment.profiles?.display_name || '익명'}
+              {(() => {
+                if (isPostAnonymous && !isStaff) {
+                  return '익명'
+                }
+                return comment.profiles?.display_name || '익명'
+              })()}
             </span>
+            {isPostAnonymous && isStaff && (
+              <span className="text-xs text-slate-500 italic">
+                (실제 작성자: {comment.profiles?.display_name || '익명'})
+              </span>
+            )}
             {isAuthor && (
               <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
                 글쓴이
@@ -311,6 +328,8 @@ export function CommentItem({ comment, currentUserId, postAuthorId, onUpdate, is
                 onUpdate()
               }}
               isReply={true}
+              isPostAnonymous={isPostAnonymous}
+              isStaff={isStaff}
             />
           ))}
         </div>

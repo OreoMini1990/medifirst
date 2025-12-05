@@ -15,7 +15,7 @@ DROP CONSTRAINT IF EXISTS profiles_role_check;
 
 ALTER TABLE profiles 
 ADD CONSTRAINT profiles_role_check 
-CHECK (role IN ('doctor', 'nurse', 'assistant', 'pt', 'rt', 'admin_staff', 'manager', 'etc'));
+CHECK (role IN ('doctor', 'locum_doctor', 'manager', 'nurse', 'assistant', 'pt', 'rt', 'cp', 'admin_staff', 'etc'));
 
 -- 기존 데이터 마이그레이션: hospital_name이 있으면 workplace_name으로 복사
 UPDATE profiles 

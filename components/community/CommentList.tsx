@@ -8,9 +8,11 @@ interface CommentListProps {
   currentUserId: string | null
   postAuthorId: string | null
   onUpdate: () => void
+  isPostAnonymous?: boolean
+  isStaff?: boolean
 }
 
-export function CommentList({ comments, currentUserId, postAuthorId, onUpdate }: CommentListProps) {
+export function CommentList({ comments, currentUserId, postAuthorId, onUpdate, isPostAnonymous = false, isStaff = false }: CommentListProps) {
   if (comments.length === 0) {
     return (
       <div className="text-center py-8 text-slate-500 dark:text-slate-400">
@@ -31,6 +33,8 @@ export function CommentList({ comments, currentUserId, postAuthorId, onUpdate }:
           currentUserId={currentUserId}
           postAuthorId={postAuthorId}
           onUpdate={onUpdate}
+          isPostAnonymous={isPostAnonymous}
+          isStaff={isStaff}
         />
       ))}
     </div>

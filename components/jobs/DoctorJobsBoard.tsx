@@ -40,12 +40,38 @@ const regions = [
 export function DoctorJobsBoard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [userRole, setUserRole] = useState<UserRole | null>(null)
+  const [userRoles, setUserRoles] = useState<UserRole[]>([])
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedRegion, setSelectedRegion] = useState('전체')
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([])
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
   const jobsPerPage = 20
+  
+  const specialties = [
+    '전공무관',
+    '일반의',
+    '가정의학과',
+    '내과',
+    '마취통증의학과',
+    '비뇨의학과',
+    '산부인과',
+    '성형외과',
+    '소아청소년과',
+    '신경과',
+    '신경외과',
+    '안과',
+    '영상의학과',
+    '외과',
+    '응급의학과',
+    '이비인후과',
+    '재활의학과',
+    '정신건강의학과',
+    '정형외과',
+    '피부과',
+    '흉부외과',
+  ]
   const supabase = createClient()
   const router = useRouter()
 
@@ -59,23 +85,51 @@ export function DoctorJobsBoard() {
     if (!user) {
       // 비로그인 사용자도 볼 수 있도록 userRole을 null로 유지
       setUserRole(null)
+      setUserRoles([])
       setLoading(false)
       return
     }
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, roles')
       .eq('id', user.id)
       .single()
 
-    setUserRole(profile?.role as UserRole || null)
+    const role = profile?.role as UserRole || null
+    setUserRole(role)
+    
+    // roles 배열 파싱
+    const roles: UserRole[] = []
+    if (profile?.roles) {
+      try {
+        const parsedRoles = Array.isArray(profile.roles) ? profile.roles : JSON.parse(profile.roles as string)
+        if (Array.isArray(parsedRoles)) {
+          roles.push(...parsedRoles.filter(r => r))
+        }
+      } catch (e) {
+        // 파싱 실패 시 무시
+      }
+    }
+    // role 단일값도 추가
+    if (role) {
+      roles.push(role)
+    }
+    setUserRoles([...new Set(roles)]) // 중복 제거
+    
     setLoading(false)
   }
 
   const fetchJobs = useCallback(async () => {
-    // 의사가 아니면 조회하지 않음
-    if (userRole !== null && userRole !== 'doctor') {
+    // 의사 접근 가능 여부 확인
+    const hasDoctorAccess = 
+      userRole === null || // 비로그인 사용자는 볼 수 있음
+      userRole === 'doctor' || 
+      userRole === 'manager' || 
+      userRole === 'locum_doctor' ||
+      userRoles.includes('doctor')
+    
+    if (!hasDoctorAccess) {
       setJobs([])
       setTotalPages(0)
       setLoading(false)
@@ -91,9 +145,41 @@ export function DoctorJobsBoard() {
         .select('*', { count: 'exact', head: true })
         .eq('position', 'doctor')
 
-      // 지역 필터링
-      if (selectedRegion && selectedRegion !== '전체') {
-        countQuery = countQuery.ilike('region', `%${selectedRegion}%`)
+      // 전공 필터링 (복수 선택)
+      if (selectedSpecialties.length > 0) {
+        if (selectedSpecialties.length === 1) {
+          if (selectedSpecialties[0] === '전공무관') {
+            // 전공무관은 specialty가 NULL이거나 '전공무관'인 경우
+            countQuery = countQuery.or('specialty.is.null,specialty.eq.전공무관')
+          } else {
+            countQuery = countQuery.eq('specialty', selectedSpecialties[0])
+          }
+        } else {
+          // 여러 전공 선택 시 OR 조건
+          const conditions: string[] = []
+          if (selectedSpecialties.includes('전공무관')) {
+            conditions.push('specialty.is.null')
+            conditions.push('specialty.eq.전공무관')
+          }
+          const otherSpecialties = selectedSpecialties.filter(s => s !== '전공무관')
+          if (otherSpecialties.length > 0) {
+            conditions.push(...otherSpecialties.map(s => `specialty.eq.${s}`))
+          }
+          if (conditions.length > 0) {
+            countQuery = countQuery.or(conditions.join(','))
+          }
+        }
+      }
+
+      // 지역 필터링 (복수 선택)
+      if (selectedRegions.length > 0) {
+        if (selectedRegions.length === 1) {
+          countQuery = countQuery.ilike('region', `%${selectedRegions[0]}%`)
+        } else {
+          // 여러 지역 선택 시 OR 조건
+          const orConditions = selectedRegions.map(region => `region.ilike.%${region}%`).join(',')
+          countQuery = countQuery.or(orConditions)
+        }
       }
 
       // 검색어가 있으면 제목으로 필터링
@@ -112,9 +198,15 @@ export function DoctorJobsBoard() {
         .select('*, profiles!hospital_id(display_name, workplace_name)')
         .eq('position', 'doctor')
 
-      // 지역 필터링
-      if (selectedRegion && selectedRegion !== '전체') {
-        query = query.ilike('region', `%${selectedRegion}%`)
+      // 지역 필터링 (복수 선택)
+      if (selectedRegions.length > 0) {
+        if (selectedRegions.length === 1) {
+          query = query.ilike('region', `%${selectedRegions[0]}%`)
+        } else {
+          // 여러 지역 선택 시 OR 조건
+          const orConditions = selectedRegions.map(region => `region.ilike.%${region}%`).join(',')
+          query = query.or(orConditions)
+        }
       }
 
       // 검색어가 있으면 제목으로 필터링
@@ -138,14 +230,21 @@ export function DoctorJobsBoard() {
     } finally {
       setLoading(false)
     }
-  }, [userRole, currentPage, jobsPerPage, searchQuery, selectedRegion, supabase])
+  }, [userRole, userRoles, currentPage, jobsPerPage, searchQuery, selectedRegions, selectedSpecialties, supabase])
 
   useEffect(() => {
-    // userRole이 null이거나 'doctor'일 때만 조회
-    if (userRole === null || userRole === 'doctor') {
+    // 의사 접근 가능한 경우에만 조회
+    const hasAccess = 
+      userRole === null || 
+      userRole === 'doctor' || 
+      userRole === 'manager' || 
+      userRole === 'locum_doctor' ||
+      userRoles.includes('doctor')
+    
+    if (hasAccess) {
       fetchJobs()
     }
-  }, [userRole, currentPage, searchQuery, selectedRegion, fetchJobs])
+  }, [userRole, userRoles, currentPage, searchQuery, selectedRegions, selectedSpecialties, fetchJobs])
 
   // 페이지 포커스 시 새로고침
   useEffect(() => {
@@ -166,15 +265,15 @@ export function DoctorJobsBoard() {
     }
   }, [userRole, fetchJobs])
 
-  // 의사가 아닌 회원이 접근 시 경고 표시
-  useEffect(() => {
-    if (userRole && userRole !== 'doctor') {
-      alert('의사 멤버 전용입니다.')
-      router.push('/jobs?tab=other&type=recruit')
-    }
-  }, [userRole, router])
+  // 의사 접근 권한 확인
+  const hasAccess = 
+    userRole === null || // 비로그인 사용자는 볼 수 있음
+    userRole === 'doctor' || 
+    userRole === 'manager' || 
+    userRole === 'locum_doctor' ||
+    userRoles.includes('doctor')
 
-  if (userRole && userRole !== 'doctor') {
+  if (!hasAccess && userRole !== null) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         의사 멤버 전용입니다.
@@ -183,43 +282,118 @@ export function DoctorJobsBoard() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">의사 구인</h2>
-        <Button asChild className="ml-auto rounded-full bg-black text-white px-4 py-2 text-sm flex items-center gap-2 hover:bg-black/90">
-          <Link href="/jobs/doctor/new">
-            <PenLine className="h-4 w-4" />
-            구인 등록
-          </Link>
-        </Button>
-      </div>
-
-      {/* 지역 필터 */}
-      <div className="flex flex-wrap gap-2">
-        {regions.map((region) => (
-          <Button
-            key={region}
-            variant={selectedRegion === region ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setSelectedRegion(region)
-              setCurrentPage(1)
-            }}
-            className={selectedRegion === region ? 'bg-emerald-500 text-white hover:bg-emerald-600' : ''}
+    <div className="space-y-0 p-6">
+      {/* 전공 필터 (체크박스) */}
+      <div className="mb-4">
+        <div className="text-sm font-medium text-slate-700 mb-2">전공</div>
+        <div className="flex flex-wrap gap-2">
+          <label
+            className={`flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedSpecialties.length === 0
+                ? 'bg-[#00B992] text-white border border-[#00B992]'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+            }`}
           >
-            {region}
-          </Button>
-        ))}
+            <input
+              type="checkbox"
+              checked={selectedSpecialties.length === 0}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedSpecialties([])
+                }
+                setCurrentPage(1)
+              }}
+              className="w-3.5 h-3.5 text-[#00B992] border-slate-300 rounded focus:ring-[#00B992] focus:ring-1"
+            />
+            <span>전체</span>
+          </label>
+          {specialties.map((specialty) => (
+            <label
+              key={specialty}
+              className={`flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                selectedSpecialties.includes(specialty)
+                  ? 'bg-[#00B992] text-white border border-[#00B992]'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedSpecialties.includes(specialty)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedSpecialties([...selectedSpecialties, specialty])
+                  } else {
+                    setSelectedSpecialties(selectedSpecialties.filter(s => s !== specialty))
+                  }
+                  setCurrentPage(1)
+                }}
+                className="w-3.5 h-3.5 text-[#00B992] border-slate-300 rounded focus:ring-[#00B992] focus:ring-1"
+              />
+              <span>{specialty}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      
+      {/* 지역 필터 (체크박스) */}
+      <div className="mb-4">
+        <div className="text-sm font-medium text-slate-700 mb-2">지역</div>
+        <div className="flex flex-wrap gap-2">
+          <label
+            className={`flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedRegions.length === 0
+                ? 'bg-[#00B992] text-white border border-[#00B992]'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={selectedRegions.length === 0}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedRegions([])
+                }
+                setCurrentPage(1)
+              }}
+              className="w-3.5 h-3.5 text-[#00B992] border-slate-300 rounded focus:ring-[#00B992] focus:ring-1"
+            />
+            <span>전체</span>
+          </label>
+          {regions.filter(r => r !== '전체').map((region) => (
+            <label
+              key={region}
+              className={`flex items-center space-x-2 cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                selectedRegions.includes(region)
+                  ? 'bg-[#00B992] text-white border border-[#00B992]'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRegions.includes(region)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedRegions([...selectedRegions, region])
+                  } else {
+                    setSelectedRegions(selectedRegions.filter(r => r !== region))
+                  }
+                  setCurrentPage(1)
+                }}
+                className="w-3.5 h-3.5 text-[#00B992] border-slate-300 rounded focus:ring-[#00B992] focus:ring-1"
+              />
+              <span>{region}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* 구인글 리스트 */}
       {!loading && jobs.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          구인글이 없습니다.
+        <div className="py-16 text-center">
+          <p className="text-sm text-slate-400 font-normal">구인글이 없습니다.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-950 rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <ul className="divide-y divide-slate-100">
           {jobs.map((job) => (
             <JobListItem
               key={job.id}
@@ -235,51 +409,26 @@ export function DoctorJobsBoard() {
         </ul>
       )}
 
-      {/* 페이지네이션 */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-      />
-
-      {/* 검색 바 */}
-      <div className="mt-4 flex w-full max-w-xl mx-auto items-center gap-2">
-        <select className="h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm">
-          <option value="title">제목</option>
-          <option value="description">내용</option>
-          <option value="hospital">병원명</option>
-        </select>
-        <input
-          className="flex-1 h-10 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          placeholder="검색할 단어 입력"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              setCurrentPage(1)
-            }
-          }}
-        />
-        <Button
-          className="h-10 px-4 rounded-full bg-slate-900 dark:bg-slate-800 text-white text-sm flex items-center gap-1 hover:bg-slate-800 dark:hover:bg-slate-700"
-          onClick={() => setCurrentPage(1)}
-        >
-          <Search className="h-4 w-4" />
-          검색
-        </Button>
-        {searchQuery && (
-          <Button
-            variant="outline"
-            className="h-10 px-4 rounded-full text-sm"
-            onClick={() => {
-              setSearchQuery('')
-              setCurrentPage(1)
-            }}
+      {/* 하단 영역 */}
+      <div className="flex items-center justify-between pt-6 pb-2 border-t border-slate-100 mt-6">
+        {/* 페이지네이션 */}
+        <div className="flex justify-center flex-1">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+        
+        {/* 글쓰기 버튼 */}
+        <div className="flex justify-end">
+          <a
+            href="/jobs/doctor/new"
+            className="inline-flex items-center rounded-md bg-[#00B992] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#00A882] active:bg-[#009872] transition-colors"
           >
-            초기화
-          </Button>
-        )}
+            구인 등록
+          </a>
+        </div>
       </div>
     </div>
   )

@@ -8,11 +8,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Lock } from 'lucide-react'
+
+const qaTags: Record<string, string> = {
+  health_insurance: '건보',
+  auto_insurance: '자보',
+  industrial: '산재',
+  etc: '기타',
+}
 
 export default function NewClaimsQAPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
+  const [category, setCategory] = useState<string>('etc')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -36,7 +51,7 @@ export default function NewClaimsQAPage() {
         author_id: user.id,
         board: 'claims',
         sub_board: 'qa',
-        category: null,
+        category: category || 'etc',
         title,
         content,
         is_question: true,
@@ -78,6 +93,21 @@ export default function NewClaimsQAPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">분류 <span className="text-red-500">*</span></Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="분류를 선택해주세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(qaTags).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="title">제목</Label>
               <Input

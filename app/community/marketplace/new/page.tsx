@@ -16,19 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-// 소통광장 태그
-const communicationTags: Record<string, string> = {
-  medical: '의학',
-  free: '자유',
-  question: '질문',
-  info: '정보',
-  restaurant: '맛집',
+// 장터 태그
+const marketplaceTags: Record<string, string> = {
+  sell: '팝니다',
+  buy: '삽니다',
 }
 
-export default function NewQAPostPage() {
+export default function NewMarketplacePostPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [tag, setTag] = useState<string>('question') // 기본값: 질문
+  const [tag, setTag] = useState<string>('sell') // 기본값: 팝니다
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -51,11 +48,11 @@ export default function NewQAPostPage() {
       .insert({
         author_id: user.id,
         board: 'community',
-        sub_board: 'qa',
+        sub_board: 'marketplace',
         category: tag || null, // 태그를 category에 저장
         title,
         content,
-        is_question: true,
+        is_question: false,
         is_pinned: false,
       })
       .select()
@@ -68,7 +65,7 @@ export default function NewQAPostPage() {
       setLoading(false)
     } else if (newPost) {
       // 작성한 게시글 상세 페이지로 리다이렉트
-      router.push(`/community/qa/${newPost.id}`)
+      router.push(`/community/marketplace/${newPost.id}`)
       router.refresh()
     } else {
       setError('게시글이 생성되지 않았습니다.')
@@ -80,7 +77,7 @@ export default function NewQAPostPage() {
     <div className="max-w-3xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>소통광장 질문하기</CardTitle>
+          <CardTitle>장터 글쓰기</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -91,14 +88,14 @@ export default function NewQAPostPage() {
                   <SelectValue placeholder="태그를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(communicationTags).map(([value, label]) => (
+                  {Object.entries(marketplaceTags).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-slate-500">질문의 주제에 맞는 태그를 선택해주세요</p>
+              <p className="text-xs text-slate-500">팝니다 또는 삽니다를 선택해주세요</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">제목</Label>
@@ -106,7 +103,7 @@ export default function NewQAPostPage() {
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="질문 제목을 입력하세요"
+                placeholder="예: 의료기기 판매합니다"
                 required
               />
             </div>
@@ -116,7 +113,7 @@ export default function NewQAPostPage() {
                 id="content"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="질문 내용을 자세히 입력해주세요"
+                placeholder="상품 정보, 가격, 연락처 등을 자세히 입력해주세요"
                 rows={10}
                 required
               />
@@ -126,7 +123,7 @@ export default function NewQAPostPage() {
             )}
             <div className="flex gap-2">
               <Button type="submit" disabled={loading}>
-                {loading ? '작성 중...' : '질문하기'}
+                {loading ? '작성 중...' : '작성하기'}
               </Button>
               <Button type="button" variant="outline" onClick={() => router.back()}>
                 취소

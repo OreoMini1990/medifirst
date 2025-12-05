@@ -41,12 +41,29 @@ export default function FreePostDetailPage() {
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [liking, setLiking] = useState(false)
+  const [isStaff, setIsStaff] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
     async function getCurrentUser() {
       const { data: { user } } = await supabase.auth.getUser()
       setCurrentUserId(user?.id || null)
+      
+      // 관리자 권한 확인
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, email')
+          .eq('id', user.id)
+          .single()
+        
+        // 관리자는 manager, admin_staff, 또는 staff@medifirst.com
+        setIsStaff(
+          profile?.role === 'manager' || 
+          profile?.role === 'admin_staff' || 
+          profile?.email === 'staff@medifirst.com'
+        )
+      }
     }
     getCurrentUser()
   }, [supabase])
@@ -293,13 +310,18 @@ export default function FreePostDetailPage() {
 
         <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-4">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-              {(post.profiles?.display_name || '익명')[0]?.toUpperCase() || '?'}
+            <AvatarFallback className="bg-slate-400 dark:bg-slate-600 text-white dark:text-slate-200">
+              ?
             </AvatarFallback>
           </Avatar>
           <span className="font-medium text-slate-800 dark:text-slate-100">
-            {post.profiles?.display_name || '익명'}
+            익명
           </span>
+          {post.category === 'anonymous' && isStaff && (
+            <span className="text-xs text-slate-500 italic">
+              (실제 작성자: {post.profiles?.display_name || '익명'})
+            </span>
+          )}
           <button
             onClick={handleLike}
             disabled={liking}
@@ -433,6 +455,8 @@ export default function FreePostDetailPage() {
           currentUserId={currentUserId}
           postAuthorId={post?.author_id || null}
           onUpdate={fetchComments}
+          isPostAnonymous={post?.category === 'anonymous'}
+          isStaff={isStaff}
         />
       </section>
 

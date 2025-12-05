@@ -8,12 +8,14 @@ import { Search } from 'lucide-react'
 
 const roleLabels: Record<UserRole, string> = {
   doctor: '의사',
+  locum_doctor: '페닥',
+  manager: '개원의',
   nurse: '간호사',
   assistant: '간호조무사',
   pt: '물리치료사',
   rt: '방사선사',
-  admin_staff: '행정·원무',
-  manager: '원장/관리자',
+  cp: '임병',
+  admin_staff: '원무',
   etc: '기타',
 }
 
@@ -21,10 +23,15 @@ const getRoleShortLabel = (role: UserRole | string | null): string => {
   if (!role) return ''
   const fullLabel = roleLabels[role as UserRole] || role
   if (fullLabel.length <= 2) return fullLabel
-  if (fullLabel === '간호조무사') return '간조'
+  // 특정 직무는 약어로 표시
+  if (role === 'manager') return '원장' // 태그는 2글자 규칙에 따라 "원장"으로 표시
+  if (role === 'nurse') return 'RN'
+  if (role === 'assistant') return 'AN'
+  if (role === 'locum_doctor') return '페닥'
+  if (role === 'cp') return '임병'
   if (fullLabel === '물리치료사') return '물치'
   if (fullLabel === '방사선사') return '방사'
-  if (fullLabel === '행정·원무') return '행정'
+  if (fullLabel === '원무') return '원무'
   return fullLabel.slice(0, 2)
 }
 
@@ -55,9 +62,10 @@ interface AllPostsBoardProps {
   userRole?: UserRole | null
   activeTab?: string
   searchQuery?: string
+  activeTag?: string | null
 }
 
-export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 'all', searchQuery: externalSearchQuery = '' }: AllPostsBoardProps) {
+export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 'all', searchQuery: externalSearchQuery = '', activeTag = null }: AllPostsBoardProps) {
   const [posts, setPosts] = useState<(Post & { commentCount?: number; likeCount?: number; viewCount?: number })[]>(initialPosts)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -75,10 +83,61 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
     setCurrentPage(1)
   }, [initialPosts, postsPerPage])
 
+  // 태그 및 검색 필터링
+  let filteredPosts = posts
+
+  // 태그 필터링
+  if (activeTag === 'best') {
+    // 베스트: 월간(30일) 게시글 중 조회수 + 추천수 + 댓글수 점수로 상위 10개만
+    const now = Date.now()
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000) // 30일 전
+    
+    filteredPosts = [...filteredPosts]
+      .filter(post => {
+        const postTime = new Date(post.created_at).getTime()
+        return postTime >= thirtyDaysAgo // 최근 30일 내 게시글만
+      })
+      .map(post => {
+        const viewScore = post.viewCount || 0
+        const likeScore = post.likeCount || 0
+        const commentScore = post.commentCount || 0
+        const bestScore = viewScore + likeScore + commentScore
+        return { ...post, bestScore }
+      })
+      .sort((a: any, b: any) => b.bestScore - a.bestScore)
+      .slice(0, 10) // 상위 10개만
+  } else if (activeTag === 'hot') {
+    // 핫이슈: 신규 글(24시간 내) 중 조회수 + 추천수 + 댓글수 높은 글 10개만
+    const now = Date.now()
+    const oneDayAgo = now - (24 * 60 * 60 * 1000) // 24시간 전
+    
+    filteredPosts = [...filteredPosts]
+      .filter(post => {
+        const postTime = new Date(post.created_at).getTime()
+        return postTime >= oneDayAgo // 최근 24시간 내 게시글만
+      })
+      .map(post => {
+        const viewScore = post.viewCount || 0
+        const likeScore = post.likeCount || 0
+        const commentScore = post.commentCount || 0
+        const hotScore = viewScore + likeScore + commentScore
+        return { ...post, hotScore }
+      })
+      .sort((a: any, b: any) => b.hotScore - a.hotScore)
+      .slice(0, 10) // 상위 10개만
+  } else if (activeTag === 'all' || !activeTag) {
+    // 전체: 기본 정렬 유지 (고정글 우선, 최신순)
+    filteredPosts = [...filteredPosts].sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1
+      if (!a.is_pinned && b.is_pinned) return 1
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }
+
   // 검색 필터링
-  const filteredPosts = searchQuery.trim()
-    ? posts.filter(post => post.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : posts
+  if (searchQuery.trim()) {
+    filteredPosts = filteredPosts.filter(post => post.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  }
 
   const paginatedPosts = filteredPosts.slice(
     (currentPage - 1) * postsPerPage,
@@ -91,19 +150,10 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
   }, [searchQuery, filteredPosts.length, postsPerPage])
 
 
-  if (!userRole) {
-    return (
-      <div className="py-12 text-center">
-        <p className="text-sm text-slate-600 mb-2">로그인이 필요합니다.</p>
-        <p className="text-xs text-slate-400">게시글을 보려면 먼저 로그인해주세요.</p>
-      </div>
-    )
-  }
+  // 로그인 없이도 게시글 볼 수 있도록 변경
 
   const getWriteHref = () => {
-    if (activeTab === 'all' || activeTab === 'role') return '/community/role/new'
-    if (activeTab === 'free') return '/community/free/new'
-    return '/community/qa/new'
+    return '/community/new'
   }
 
   return (
@@ -122,7 +172,6 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
                 href={getPostHref(post)}
                 title={post.title}
                 categoryLabel={category}
-                boardTag={category}
                 createdAt={post.created_at}
                 updatedAt={post.updated_at}
                 isPinned={post.is_pinned || false}
@@ -130,6 +179,9 @@ export function AllPostsBoard({ initialPosts = [], userRole = null, activeTab = 
                 likeCount={post.likeCount || 0}
                 commentCount={post.commentCount || 0}
                 viewCount={post.viewCount || 0}
+                authorDisplayName={post.profiles?.display_name || null}
+                avatarUrl={(post.profiles as any)?.avatar_url || null}
+                showStats={true}
               />
             )
           })}

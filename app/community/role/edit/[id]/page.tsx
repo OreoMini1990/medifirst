@@ -12,12 +12,14 @@ import type { UserRole } from '@/types/database'
 
 const roleLabels: Record<UserRole, string> = {
   doctor: '의사',
+  locum_doctor: '페닥',
+  manager: '개원의',
   nurse: '간호사',
   assistant: '간호조무사',
   pt: '물리치료사',
   rt: '방사선사',
-  admin_staff: '행정·원무',
-  manager: '원장/관리자',
+  cp: '임병',
+  admin_staff: '원무',
   etc: '기타',
 }
 

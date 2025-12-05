@@ -12,13 +12,31 @@ import { Search } from 'lucide-react'
 
 const roleLabels: Record<UserRole, string> = {
   doctor: '의사',
+  locum_doctor: '페닥',
+  manager: '개원의',
   nurse: '간호사',
   assistant: '간호조무사',
   pt: '물리치료사',
   rt: '방사선사',
-  admin_staff: '행정·원무',
-  manager: '원장/관리자',
+  cp: '임병',
+  admin_staff: '원무',
   etc: '기타',
+}
+
+const getRoleShortLabel = (role: UserRole | string | null): string => {
+  if (!role) return ''
+  const fullLabel = roleLabels[role as UserRole] || role
+  if (fullLabel.length <= 2) return fullLabel
+  // 특정 직무는 약어로 표시
+  if (role === 'manager') return '원장' // 태그는 2글자 규칙에 따라 "원장"으로 표시
+  if (role === 'nurse') return 'RN'
+  if (role === 'assistant') return 'AN'
+  if (role === 'locum_doctor') return '페닥'
+  if (role === 'cp') return '임병'
+  if (fullLabel === '물리치료사') return '물치'
+  if (fullLabel === '방사선사') return '방사'
+  if (fullLabel === '원무') return '원무'
+  return fullLabel.slice(0, 2)
 }
 
 interface RoleCommunityProps {
@@ -26,10 +44,12 @@ interface RoleCommunityProps {
   userRole?: UserRole | null
   activeTab?: string
   searchQuery?: string
+  activeTag?: string | null
+  userRoles?: UserRole[]
 }
 
-export function RoleCommunity({ initialPosts = [], userRole = null, activeTab = 'role', searchQuery: externalSearchQuery = '' }: RoleCommunityProps) {
-  const [posts, setPosts] = useState<Post[]>(initialPosts)
+export function RoleCommunity({ initialPosts = [], userRole = null, activeTab = 'role', searchQuery: externalSearchQuery = '', activeTag = null, userRoles = [] }: RoleCommunityProps) {
+  const [posts, setPosts] = useState<(Post & { commentCount?: number; likeCount?: number; viewCount?: number })[]>(initialPosts as (Post & { commentCount?: number; likeCount?: number; viewCount?: number })[])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [searchQuery, setSearchQuery] = useState(externalSearchQuery)
@@ -46,10 +66,30 @@ export function RoleCommunity({ initialPosts = [], userRole = null, activeTab = 
     setCurrentPage(1)
   }, [initialPosts, postsPerPage])
 
+  // 태그 및 검색 필터링
+  let filteredPosts = posts
+
+  // 직무별 게시글은 sub_board가 'role'이고 category가 직무(UserRole)인 경우만 표시
+  filteredPosts = filteredPosts.filter(post => {
+    if (post.sub_board !== 'role') return false
+    const postCategory = post.category as string
+    return postCategory && ['doctor', 'locum_doctor', 'manager', 'nurse', 'assistant', 'pt', 'rt', 'cp', 'admin_staff', 'etc'].includes(postCategory)
+  })
+
+  // 태그 필터링 (직무별)
+  if (activeTag) {
+    // 특정 직무 태그 선택 시 해당 직무 게시글만 표시
+    filteredPosts = filteredPosts.filter(post => post.category === activeTag)
+  } else if (userRoles.length > 0) {
+    // 로그인한 경우: 사용자의 모든 직무 게시글 표시
+    filteredPosts = filteredPosts.filter(post => userRoles.includes(post.category as UserRole))
+  }
+  // 로그인 안한 경우: 전체 직무 게시글 표시 (필터링 없음)
+
   // 검색 필터링
-  const filteredPosts = searchQuery.trim()
-    ? posts.filter(post => post.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    : posts
+  if (searchQuery.trim()) {
+    filteredPosts = filteredPosts.filter(post => post.title.toLowerCase().includes(searchQuery.toLowerCase()))
+  }
 
   const paginatedPosts = filteredPosts.slice(
     (currentPage - 1) * postsPerPage,
@@ -61,17 +101,11 @@ export function RoleCommunity({ initialPosts = [], userRole = null, activeTab = 
     setCurrentPage(1)
   }, [searchQuery, filteredPosts.length, postsPerPage])
 
-  if (!userRole) {
-    return (
-      <div className="py-12 text-center">
-        <p className="text-sm text-slate-600 mb-2">로그인이 필요합니다.</p>
-        <p className="text-xs text-slate-400">게시글을 보려면 먼저 로그인해주세요.</p>
-      </div>
-    )
-  }
+  // 로그인 없이도 게시글 볼 수 있도록 변경
+  // 직무별 게시글은 로그인한 경우 해당 직무 게시글만, 로그인 안한 경우 전체 직무 게시글 표시
 
   const getWriteHref = () => {
-    return '/community/role/new'
+    return '/community/new'
   }
 
   return (
@@ -83,21 +117,31 @@ export function RoleCommunity({ initialPosts = [], userRole = null, activeTab = 
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {paginatedPosts.map((post, index) => (
-            <PostListItem
-              key={post.id}
-              href={`/community/role/${post.id}`}
-              title={post.title}
-              categoryLabel={roleLabels[userRole]}
-              createdAt={post.created_at}
-              updatedAt={post.updated_at}
-              isPinned={post.is_pinned || false}
-              index={index}
-              likeCount={post.like_count || 0}
-              commentCount={0}
-              viewCount={post.view_count || 0}
-            />
-          ))}
+          {paginatedPosts.map((post, index) => {
+            // 게시글의 category를 기반으로 라벨 가져오기
+            const postCategory = post.category as UserRole
+            const categoryLabel = postCategory ? roleLabels[postCategory] || postCategory : ''
+            const shortLabel = getRoleShortLabel(postCategory)
+            
+            return (
+              <PostListItem
+                key={post.id}
+                href={`/community/role/${post.id}`}
+                title={post.title}
+                categoryLabel={shortLabel || categoryLabel}
+                createdAt={post.created_at}
+                updatedAt={post.updated_at}
+                isPinned={post.is_pinned || false}
+                index={index}
+                likeCount={post.likeCount || post.like_count || 0}
+                commentCount={post.commentCount || 0}
+                viewCount={post.viewCount || post.view_count || 0}
+                authorDisplayName={post.profiles?.display_name || null}
+                avatarUrl={(post.profiles as any)?.avatar_url || null}
+                showStats={true}
+              />
+            )
+          })}
         </ul>
       )}
 

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   display_name TEXT,
-  role TEXT CHECK (role IN ('doctor', 'nurse', 'assistant', 'pt', 'rt', 'admin_staff', 'manager', 'etc')),
+  role TEXT CHECK (role IN ('doctor', 'locum_doctor', 'manager', 'nurse', 'assistant', 'pt', 'rt', 'cp', 'admin_staff', 'etc')),
   workplace_name TEXT,  -- 근무지 이름 (병원명, 의원명 등)
   workplace_type TEXT CHECK (workplace_type IN ('clinic', 'hospital', 'etc')),  -- 근무지 유형 (선택사항)
   hospital_name TEXT,  -- 하위 호환성을 위해 유지 (deprecated, workplace_name 사용 권장)

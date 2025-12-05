@@ -16,19 +16,20 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const categoryLabels: Record<string, string> = {
-  treatment: '진료이야기',
-  claims: '심사청구',
-  startup: '개원·경영',
-  cs: 'CS',
-  hr: 'HR',
-  chat: '잡담',
+// 소통광장 태그
+const communicationTags: Record<string, string> = {
+  medical: '의학',
+  free: '자유',
+  question: '질문',
+  info: '정보',
+  restaurant: '맛집',
 }
 
 export default function NewFreePostPage() {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
-  const [category, setCategory] = useState<string>('')
+  const [tag, setTag] = useState<string>('free') // 기본값: 자유
+  const [subBoard, setSubBoard] = useState<'free' | 'qa'>('free') // 자유게시판 또는 질문게시판
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
@@ -46,16 +47,20 @@ export default function NewFreePostPage() {
       return
     }
 
+    // 태그에 따라 sub_board 결정
+    const finalSubBoard = tag === 'question' ? 'qa' : 'free'
+    const isQuestion = tag === 'question'
+
     const { data: newPost, error: insertError } = await supabase
       .from('posts')
       .insert({
         author_id: user.id,
         board: 'community',
-        sub_board: 'free',
-        category: category && category !== 'none' ? category : null,
+        sub_board: finalSubBoard,
+        category: tag || null, // 태그를 category에 저장
         title,
         content,
-        is_question: false,
+        is_question: isQuestion,
         is_pinned: false,
       })
       .select()
@@ -80,25 +85,33 @@ export default function NewFreePostPage() {
     <div className="max-w-3xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>자유게시판 글쓰기</CardTitle>
+          <CardTitle>소통광장 글쓰기</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="category">카테고리</Label>
-              <Select value={category || undefined} onValueChange={(value) => setCategory(value === 'none' ? '' : value)}>
+              <Label htmlFor="tag">태그 <span className="text-red-500">*</span></Label>
+              <Select value={tag} onValueChange={(value) => {
+                setTag(value)
+                // 질문 태그 선택 시 자동으로 qa로 변경
+                if (value === 'question') {
+                  setSubBoard('qa')
+                } else {
+                  setSubBoard('free')
+                }
+              }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="카테고리 선택 (선택사항)" />
+                  <SelectValue placeholder="태그를 선택하세요" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">선택 안함</SelectItem>
-                  {Object.entries(categoryLabels).map(([value, label]) => (
+                  {Object.entries(communicationTags).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-slate-500">글의 주제에 맞는 태그를 선택해주세요</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">제목</Label>
