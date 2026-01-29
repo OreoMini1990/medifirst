@@ -15,11 +15,10 @@ export const config = {
     /*
      * Match all request paths except:
      * - _next/static, _next/image, favicon.ico, static images
-     * - api (전체 /api/* 제외 → proxy 미실행, API 라우트 직통)
-     *   · /api/naver/oauth/* kakkaobot !질문 OAuth (로그인 불필요)
-     *   · 기타 API는 각 라우트에서 supabase.auth.getUser() 사용
+     * - api (전체 /api/* 제외)
+     * - oauth (전체 /oauth/* 제외 → kakkaobot !질문 Naver OAuth, 로그인 리다이렉트 없음)
      */
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|oauth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
 
