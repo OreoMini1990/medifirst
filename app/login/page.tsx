@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -11,13 +11,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { Chrome } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
+
+  // kakkaobot !질문 OAuth: /login?user_id=...&draft_id=... 로 들어온 경우 → /oauth/naver/start 로 보냄
+  const oauthRedirect = searchParams.get('user_id') && searchParams.get('draft_id')
+  useEffect(() => {
+    if (!oauthRedirect) return
+    const userId = searchParams.get('user_id')
+    const draftId = searchParams.get('draft_id')
+    if (userId && draftId) {
+      const params = new URLSearchParams()
+      params.set('user_id', userId)
+      params.set('draft_id', draftId)
+      const userName = searchParams.get('user_name')
+      if (userName) params.set('user_name', userName)
+      router.replace(`/oauth/naver/start?${params.toString()}`)
+    }
+  }, [oauthRedirect, searchParams, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -85,6 +102,14 @@ export default function LoginPage() {
       setError('구글 로그인 중 예상치 못한 오류가 발생했습니다.')
       setLoading(false)
     }
+  }
+
+  if (oauthRedirect) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <p className="text-muted-foreground">네이버 연동 페이지로 이동 중...</p>
+      </div>
+    )
   }
 
   return (
@@ -158,6 +183,14 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center"><p className="text-muted-foreground">로딩 중...</p></div>}>
+      <LoginContent />
+    </Suspense>
   )
 }
 
