@@ -70,6 +70,11 @@ medifirst/
     └── schema.sql         # SQL 스키마
 ```
 
+## 네이버 OAuth (kakkaobot !질문 연동)
+
+Vercel 배포(medifirstall.vercel.app)에서 `/api/naver/oauth/start`, `/api/naver/oauth/callback`를 제공합니다.  
+환경 변수·DB·배포 절차는 **`docs/NAVER_OAUTH_KAKKAOBOT.md`** 참고.
+
 ## 데이터베이스 스키마
 
 주요 테이블:
