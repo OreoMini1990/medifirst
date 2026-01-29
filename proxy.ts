@@ -3,7 +3,8 @@ import { updateSession } from '@/lib/supabase/middleware'
 
 export async function proxy(request: NextRequest) {
   const p = request.nextUrl?.pathname ?? ''
-  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api')) {
+  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api') ||
+      p.startsWith('/oauth') || p.replace(/^\/+/, '').startsWith('oauth')) {
     return NextResponse.next({ request })
   }
   return await updateSession(request)

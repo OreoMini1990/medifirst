@@ -3,7 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
   const p = request.nextUrl?.pathname ?? ''
-  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api')) {
+  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api') ||
+      p.startsWith('/oauth') || p.replace(/^\/+/, '').startsWith('oauth')) {
     return NextResponse.next({ request })
   }
 
@@ -61,7 +62,8 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !request.nextUrl.pathname.startsWith('/auth') &&
+    !request.nextUrl.pathname.startsWith('/oauth')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
