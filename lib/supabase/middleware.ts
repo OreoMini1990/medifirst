@@ -2,9 +2,19 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  const p = request.nextUrl?.pathname ?? ''
-  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api') ||
-      p.startsWith('/oauth') || p.replace(/^\/+/, '').startsWith('oauth')) {
+  const p = (request.nextUrl?.pathname ?? '').toLowerCase()
+  const rest = p.replace(/^\/+/, '')
+  if (rest.startsWith('api') || rest.startsWith('oauth')) {
+    return NextResponse.next({ request })
+  }
+  // kakkaobot OAuth 링크 쿼리(user_id+draft_id): 리다이렉트 스킵, 경로가 다르면 OAuth 시작으로 보냄
+  const q = request.nextUrl.searchParams
+  if (q.has('user_id') && q.has('draft_id')) {
+    if (!rest.startsWith('oauth/naver/start')) {
+      const oauthStart = new URL('/oauth/naver/start', request.nextUrl.origin)
+      q.forEach((v, k) => oauthStart.searchParams.set(k, v))
+      return NextResponse.redirect(oauthStart, 302)
+    }
     return NextResponse.next({ request })
   }
 
@@ -58,12 +68,13 @@ export async function updateSession(request: NextRequest) {
     user = null
   }
 
+  const pathname = request.nextUrl.pathname ?? ''
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/oauth')
+    !pathname.toLowerCase().startsWith('/login') &&
+    !pathname.toLowerCase().startsWith('/signup') &&
+    !pathname.toLowerCase().startsWith('/auth') &&
+    !pathname.toLowerCase().startsWith('/oauth')
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
