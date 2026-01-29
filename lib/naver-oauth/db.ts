@@ -1,6 +1,7 @@
 /**
  * Supabase naver_oauth_tokens 저장
- * kakkaobot과 동일 DB 사용 (service_role 권장)
+ * kakkaobot 전용 Supabase 사용 (MediFirst 홈 Supabase와 분리)
+ * env: NAVER_OAUTH_SUPABASE_URL, NAVER_OAUTH_SUPABASE_SERVICE_ROLE_KEY
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
@@ -9,15 +10,13 @@ let _client: SupabaseClient | null = null
 
 function getSupabase(): SupabaseClient {
   if (_client) return _client
-  const url =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const url = process.env.NAVER_OAUTH_SUPABASE_URL
   const key =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    process.env.NAVER_OAUTH_SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NAVER_OAUTH_SUPABASE_ANON_KEY
   if (!url || !key)
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL(또는 SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY(또는 NEXT_PUBLIC_SUPABASE_ANON_KEY) 필요'
+      'NAVER_OAUTH_SUPABASE_URL, NAVER_OAUTH_SUPABASE_SERVICE_ROLE_KEY(또는 NAVER_OAUTH_SUPABASE_ANON_KEY) 필요. kakkaobot Supabase 프로젝트용.'
     )
   _client = createClient(url, key)
   return _client
