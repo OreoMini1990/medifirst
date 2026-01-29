@@ -2,8 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  // Naver OAuth (kakkaobot !질문): 미들웨어 건너뜀, 로그인 리다이렉트 없음
-  if (request.nextUrl.pathname.startsWith('/api/naver/oauth')) {
+  const p = request.nextUrl?.pathname ?? ''
+  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api')) {
     return NextResponse.next({ request })
   }
 

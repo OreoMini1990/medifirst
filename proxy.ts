@@ -1,7 +1,11 @@
-import { type NextRequest } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function proxy(request: NextRequest) {
+  const p = request.nextUrl?.pathname ?? ''
+  if (p.startsWith('/api') || p.replace(/^\/+/, '').startsWith('api')) {
+    return NextResponse.next({ request })
+  }
   return await updateSession(request)
 }
 
